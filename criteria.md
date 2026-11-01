@@ -42,61 +42,46 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
+## 1. False Positive
 
-<!-- Your criterion. It must name a number. -->
+Given 10 human-written texts, no more than 1 of them may receive the `likely-ai` label.
 
+**Why this target:** A 10% false positive rate is tolerable because wrongly accusing a real writer is more harmful than missing some AI text
 
+---
 
-**Why this target:**
+## 2. Score Spread
 
+At least 4 of 5 clealry AI-written texts must score >= 0.65, and at least 4 of 5 clearly human-written texts must score <= 0.35.
+
+**Why this target:** Thresholds should separate obvious examples by a spread of 0.30 while leaving room for genuinely uncertain writing. The spread means obvious cases should not land close together to show clear separation.
+
+---
+
+## 3. Label Coverage
+
+In a set of 15 texts— 5 clearly human, 5 borderline and 5 clearly AI—the system must return at least 4 human labels, 4 unsure labels and 4 ai labels.
+
+**Why this target:** This verifies that all three labels are reachable and that the system can represent uncertainty instead of forcing every text into one category.
 
 
 ---
 
-## 2.
+## 4. Appeal Path
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
+Every appeal with a valid `content_id` and non-empty reasoning must return HTTP `200`, append an appeal record to the audit log, and mark the submission `under_review`.
 
 
+**Why this target:** Invalid or or unknown IDs must return 400 or 404 and must not silently change a submission's status.
 
 ---
 
-## 3.
+## 5. Bad Input
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
+Out of 5 cases with missing, empty, non-string, whitespace-only `text`, or text under 50 words, and text over 10,000 characters, there must be 0 unhandled cases. The first four must return a 4xx response with a readable message, the short text must return the "uncertain" label with a length warning, and the 100,000-character text must return within 10 seconds, either scored or rejected with a message that states the size limit.
 
 
-
----
-
-## 4.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
-
----
-
-## 5.
-
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
+**Why this target:** Both signals are unreliable on very short text (type-token ratio in particular), so the service should say "too little to judge" rather than return a confident verdict from 20 words. The size and timing limit protects the local model from being tied up by one request.
 
 
 
