@@ -39,7 +39,13 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
-
+### 1. Flask receives the JSON request containing `text` and `creator_id`.
+### 2. The route extrects the text and creator ID, then checks that the text isn't empty
+### 3. The language model, `detector.py` measures how predictable the text is. This then produces `model_score`, where a higher value means the text appears more like AI.
+### 4. The style signal, `style.py` measures how the text is structured and written. This produces `style_score`, where a higher value means the text appears more like AI.
+### 5. The model score and style score are combined into one overall score from 0.0 to 1.0
+### 6. The overall score is converted into a machine-readable guess, and a plain-language label for the reader.
+### 7. The service creates a `content_id`, records the creator, both signal scores, the combined score, the guess, and the label in the audit log, then returns those results as JSON to the reader.
 
 ---
 
@@ -53,28 +59,30 @@
 
 ### Signal one — the model signal
 
-**What it measures:**
+**What it measures:** Perplexity under a local language model. It essentially measures how suprised the model is by each next word, averaged over the text, then converts that to a score between 0 and 1, with a higher score being more AI like.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** Language models generate text by predicting likely next tokens, so its output tends to sit in an area of distribution where another model finds it easy to predict. Human writing on the other hand is less predictable, unusual word choices, sudden changes, and specific details instead of typical ones. AI text tends to be lower perplexity while human text leans to higher perplexity.
 
-**What it can't see:**
+**What it can't see:** Whether text is truly human authored as anyone who writes using common words in short, ordinary sentences scores as likely AI. Non-native english speakers will fall into this category as they tend to stick to simpler words that they are more sure of, as well as younger writers and people intentionally writing plainly. 
+Text full of uncommon words will likely score as human as well, so formality doesn't decide the score and someone can trick the model.
+There is no check whether the text is accurate, coherent, or original. It only checks how likely the word sequence is.
 
 ### Signal two — the style signal
 
-**What it measures:**
+**What it measures:** The statistical shape of the text without any understanding of any of it. It measure variation of sentence length, ratio of unique words to total text, and the punctuation density.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** AI text leans towards even, mid-length sentences and less varied band of vocabulary. Human writing is less structured, a four word sentence can be next to a thirty-word sentence, with more varied punctuation and broader vocabulary.
 
-**What it can't see:**
+**What it can't see:** It can't see the content. It is easily manipulated as any change of the text shape without any change to the substance of the text affects the score. Adding typos, varying punctuation, chopping up sentences and pasting quotations will dceive the model.
 
 ### The combining rule
 
 <!-- Write the rule in words, then give the numbers. What happens when the two
      signals disagree? -->
 
-**The rule:**
+**The rule:** Use an equal-weigthed average of the model signal and the style signal
 
-**The numbers:**
+**The numbers:** `combined_score` = (0.5 x `model_score`) + (0.5 x `style_score`)
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -82,6 +90,10 @@
      somewhere else, say where. -->
 
 **A case where my two signals split, and what my rule does with it:**
+
+In a case where the models disagree strongly, the combined score will produce a score the system labels as unsure because the two models disagree strongly. This is better than saying the writing is AI-generated based only on one signal.
+
+i.e model signal of 0.9 and style signal of 0.1: (0.5 x 0.9) + (0.5 x 0.1) = 0.5
 
 
 
