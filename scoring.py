@@ -93,10 +93,22 @@ def score_to_label(score: float) -> tuple[str, str]:
     milestone.
     """
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
+        return "ai", (
+            "The text is likely AI as it shows patterns common in AI-generated text. " 
+            "We can't be certain and the check may be wrong especially about plain, " 
+            "simple writing. If you wrote this yourself and believe this is an error, " 
+            "you can submit an appeal for a member of our team to review."
+        )
     if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+        return "human", (
+            "The text was most likely written by a human as it shows no patterns "
+            "consistent with those present in AI-generated text."
+        )
+    return "unsure", (
+        "It is unclear whether this was written by a human or AI. Certain parts are "
+        "consistent with human written text, and others are consistent with AI-generated " 
+        "text. If you wrote this yourself you don't need to do anything."
+    )
 
 
 def label_ranges() -> list[tuple[str, str]]:

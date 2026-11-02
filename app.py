@@ -222,25 +222,29 @@ def submit():
     # Step 6 - combine them. The rule is in scoring.py::combine_signals.
     combined_score = scoring.combine_signals(model_score, style_score)
 
+    # Step 8 - turn the score into a guess and the sentence a reader sees.
+    guess, label = scoring.score_to_label(combined_score)
+
     # Step 4 / 7 - log the decision with both signals and the combined score.
     # The content_id is what /appeal needs later.
     content_id = f"c_{uuid.uuid4().hex[:12]}"
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
+        guess=guess,
         model_score=model_score,
         style_score=style_score,
         combined_score=combined_score,
+        label=label,
         status="decided",
     )
 
-    # Guess and label stay placeholders until Milestone 5 (step 8).
     return jsonify({
         "content_id": content_id,
         "creator_id": creator_id,
-        "guess": "unsure",
+        "guess": guess,
         "confidence": combined_score,
-        "label": "not built yet",
+        "label": label,
         "model_score": model_score,
         "style_score": style_score,
         "combined_score": combined_score,
@@ -269,13 +273,43 @@ def appeal():
     wrong accusation and nothing at all.
     """
     payload = request.get_json(silent=True) or {}
+    content_id = payload.get("content_id")
+    reasoning = payload.get("reasoning")
 
-    # TODO: delete this and build the route.
+    # Both fields have to be real, non-empty strings. Nothing is logged and no
+    # status changes on a bad request.
+    if not isinstance(content_id, str) or not content_id.strip():
+        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"content_id\"."}), 400
+    if not isinstance(reasoning, str) or not reasoning.strip():
+        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"reasoning\"."}), 400
+
+    # Step 1 - the content_id has to match a decision we actually made.
+    content_id = content_id.strip()
+    decisions = [e for e in audit.entries_for(content_id) if e.get("status") == "decided"]
+    if not decisions:
+        return jsonify({"error": "not_found", "message": f"No submission with content_id {content_id!r}."}), 404
+
+    # Step 2 - record the appeal beside the original decision. The creator
+    # comes from that decision, not the payload, so an appeal can't be filed
+    # under someone else's name.
+    original = decisions[-1]
+    entry = audit.log_appeal(
+        content_id=content_id,
+        creator_id=original.get("creator_id"),
+        reasoning=reasoning.strip(),
+    )
+
+    # Step 3 - confirm to the writer.
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /appeal isn't built yet — see the TODO in app.py.",
-        "you_sent": payload,
-    }), 501
+        "content_id": content_id,
+        "status": entry["status"],
+        "message": (
+            "Thanks, we've received your appeal. A person will review this "
+            "decision, and your explanation is saved with it."
+        ),
+        "original_guess": original.get("guess"),
+        "appealed_at": entry["timestamp"],
+    }), 200
 
 
 # ── Already works ─────────────────────────────────────────────────────────────

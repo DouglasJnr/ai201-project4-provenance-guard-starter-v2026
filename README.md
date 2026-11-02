@@ -89,17 +89,13 @@ Rhythm (spread + punctuation) and word choice (abstract + transitions) get 0.45 
 
 ### The combining rule
 
-
-
-**The rule:** Take an equal-weighted average of the model signal and the style signal. If the two signals disagree by more than 0.40, the result is not allowed to reach the high-confidence AI label: it is capped just below the AI threshold, so a split can produce "unsure" but never "AI". The cap only works in one direction. A low score is left alone, so a split can still produce "human". One signal on its own isn't enough to accuse a writer, because a wrong accusation costs the writer far more than a missed detection costs the site.
+**The rule:** Use an equal-weighted average of the model signal and the style signal. If the two signals disagree by more than 0.40, the result is not allowed to reach the high-confidence AI label: it is capped just below the AI threshold, so a split can produce "unsure" but never "AI". The cap only works in one direction. A low score is left alone, so a split can still produce "human". One signal on its own isn't enough to accuse a writer, because a wrong accusation costs the writer far more than a missed detection costs the site.
 
 **The numbers:**
 
 - `combined_score` = (0.5 × `model_score`) + (0.5 × `style_score`)
 - if |`model_score` − `style_score`| > 0.40: `combined_score` = min(`combined_score`, `AI_THRESHOLD` − 0.01) = min(`combined_score`, 0.64)
 - `WEIGHT_MODEL_SIGNAL = 0.5`, `WEIGHT_STYLE_SIGNAL = 0.5` and `DISAGREEMENT_GAP = 0.40` live in `config.py`.
-
-**Why equal weights:** The style signal is easier to game, which argues for weighting it lower. But on the calibration inputs the model signal only ranged from 0.57 to 0.75, while the style signal ranged from 0.11 to 0.77. Weighting toward the model signal would push nearly every score into "unsure".
 
 **Why the cap sits 0.01 below the threshold:** So the cap holds whether `score_to_label` compares with `>` or `>=`.
 
@@ -114,19 +110,6 @@ A model signal of 0.95 with a style signal of 0.45: text the language model find
 
 The opposite split behaves differently on purpose. A model signal of 0.05 with a style signal of 0.60 averages to 0.33, and the cap leaves it alone, so the label is "human".
 
-**What the rule can't fix:** When both signals are wrong in the same direction, they agree, and no combining rule can catch that. Plain human writing is the case: both signals see it as predictable and even. On the calibration inputs:
-
-| Input | model | style | combined | label |
-|---|---|---|---|---|
-| clearly AI | 0.75 | 0.77 | 0.76 | AI |
-| clearly human | 0.57 | 0.11 | 0.34 | human |
-| plain human | 0.72 | 0.47 | 0.60 | unsure |
-| lightly edited AI | 0.62 | 0.58 | 0.60 | unsure |
-
-Plain human writing now lands in "unsure" rather than "AI", but only because of the word-choice measures added to the style signal, not because of the combining rule. It still scores the same as lightly edited AI. The clearly human text sits just under the 0.35 human threshold, because the model signal rates it 0.57, above neutral.
-
-
-
 ---
 
 ## Label Variants
@@ -138,16 +121,13 @@ Plain human writing now lands in "unsure" rather than "AI", but only because of 
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00 - 0.35 | The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text. |
+| unsure | >0.35 and <0.65 | It is unclear whether this was written by a human or AI.Certain parts are consistent with human written text, and others are consistent with AI-generated text. If you wrote this yourself you don't need to do anything  |
+| high-confidence AI | 0.65 - 1.00 | The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain,simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.|
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
 
-
+The person reading "unsure" may well have written every word themselves. So the label plainly says that we don't know. It explains why without blaming the writer: plain, clear writing is a known reason for this result, not a sign of cheating. And it says outright that this is not a finding of AI use and that nothing is required of them. I left out the word "suspected" and any request for them to prove anything, because a label that asks an innocent writer to defend themselves is an accusation in softer words.
 
 ---
 
@@ -166,34 +146,74 @@ Plain human writing now lands in "unsure" rather than "AI", but only because of 
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+  -d '{"text": "I started working at the library last spring. Most of my job is putting books back on the shelves and helping people find things. It is not hard work but it can get busy in the afternoon when the school lets out. I like the people I work with and the hours fit around my classes. I plan to stay there until I graduate.", "creator_id": "jr_writer"}'
 ```
 
 ```json
-
+{
+  "combined_score": 0.5987,
+  "confidence": 0.5987,
+  "content_id": "c_67101e53114c",
+  "creator_id": "jr",
+  "guess": "unsure",
+  "label": "It is unclear whether this was written by a human or AI. Certain parts are consistent with human written text, and others are consistent with AI-generated text. If you wrote this yourself you don't need to do anything.",
+  "model_score": 0.7223,
+  "style_score": 0.475
+}
 ```
 
 **An appeal**
 
 ```bash
-$ curl -X POST http://127.0.0.1:5000/appeal \
+$ curl -X POST http://127.0.0.1:5050/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+  -d '{"content_id": "c_67101e53114c", "reasoning": "I wrote this myself. It is about my own job at the library, and I kept the sentences simple on purpose."}'
 ```
 
 ```json
-
+{
+  "appealed_at": "2026-11-02T07:28:30+00:00",
+  "content_id": "c_67101e53114c",
+  "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+  "original_guess": "unsure",
+  "status": "under_review"
+}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl "http://127.0.0.1:5050/log?limit=2"
 ```
 
 ```json
-
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": 0.5987,
+      "content_id": "c_67101e53114c",
+      "creator_id": "jr",
+      "guess": "unsure",
+      "label": "It is unclear whether this was written by a human or AI. Certain parts are consistent with human written text, and others are consistent with AI-generated text. If you wrote this yourself you don't need to do anything.",
+      "model_score": 0.7223,
+      "status": "decided",
+      "style_score": 0.475,
+      "timestamp": "2026-11-02T07:27:43+00:00"
+    },
+    {
+      "content_id": "c_67101e53114c",
+      "creator_id": "jr",
+      "event": "appeal",
+      "reasoning": "I wrote this myself. It is about my own job at the library, and I kept the sentences simple on purpose.",
+      "status": "under_review",
+      "timestamp": "2026-11-02T07:28:30+00:00"
+    }
+  ]
+}
 ```
+
+The original decision is left exactly as it was; the appeal is a second entry beside it with the same `content_id`. The log is append-only, so it shows what was decided, that it was challenged, and in what order. An appeal with a missing or empty `content_id` or `reasoning` returns 400, and an unknown `content_id` returns 404; neither writes anything to the log or changes any status.
 
 ---
 
