@@ -204,7 +204,7 @@ def submit():
     text = payload.get("text")
     creator_id = payload.get("creator_id", "unknown")
     
-    # Step 3 - one real signal that we first tested fromthe terminal
+    # Step 3 - one real signal that we first tested from the terminal
     # python detector.py "some text"
     import detector
     model_score = detector.model_signal(text)
@@ -224,7 +224,7 @@ def submit():
 
     # Step 1 - the route answers. Hardcoded without any logic yet.
     return jsonify({
-        "content_id": "hardcoded",
+        "content_id": content_id,
         "creator_id": creator_id,
         "guess": "unsure",
         "confidence": model_score,
