@@ -156,8 +156,7 @@ def transition_rate(text: str) -> float:
     Transition and listing words per word. Higher means more AI-ish.
 
     Catches the "First... Second... Finally... Additionally" scaffolding of
-    generated text, which tends to survive light editing. Returns roughly
-    0.0–0.08 in practice.
+    generated text, which tends to survive light editing. 
 
     Blind spot: writers taught the five-paragraph essay do exactly this, and
     deleting the words is trivial.
@@ -201,23 +200,6 @@ def style_signal(text: str) -> float:
     abstract = abstract_vocabulary(text)
     transitions = transition_rate(text)
 
-    # Each measure goes onto a 0–1 "AI-ness" scale with a clamped linear map
-    # between two anchor values. The first three run "higher = more human", so
-    # they're flipped; the last two already point the AI way.
-    #
-    #   spread       0.2 or less -> 1.0 (sentences march in step)
-    #                1.0 or more -> 0.0 (short next to long)
-    #   punctuation  0 per word  -> 1.0;  0.10+ per word -> 0.0
-    #   vocabulary   TTR 0.65    -> 1.0;  0.95+          -> 0.0
-    #   abstract     0           -> 0.0;  0.20+          -> 1.0
-    #   transitions  0           -> 0.0;  0.05+ per word -> 1.0
-    #
-    # Weights: spread 0.3, abstract 0.3, transitions 0.15, punctuation 0.15,
-    # TTR 0.1. Rhythm (spread, punctuation) and word choice (abstract,
-    # transitions) get 0.45 each, so plain-but-even human writing can't max out
-    # the score on rhythm alone. TTR stays small because it drops with text
-    # length alone, so on inputs of different sizes it measures length as much
-    # as vocabulary.
     spread_component = _clamp((1.0 - spread) / 0.8)
     # One sentence has no spread to measure. That's missing evidence, not
     # evidence of uniformity, so it sits at neutral rather than "very AI".

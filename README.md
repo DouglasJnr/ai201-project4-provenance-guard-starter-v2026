@@ -39,7 +39,7 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
-### 1. Flask receives the JSON request containing `text` and `creator_id`.
+### 1. Flask service receives the JSON request containing `text` and `creator_id`.
 ### 2. The route extrects the text and creator ID, then checks that the text isn't empty
 ### 3. The language model, `detector.py` measures how predictable the text is. This then produces `model_score`, where a higher value means the text appears more like AI.
 ### 4. The style signal, `style.py` measures how the text is structured and written. This produces `style_score`, where a higher value means the text appears more like AI.
@@ -89,7 +89,7 @@ Rhythm (spread + punctuation) and word choice (abstract + transitions) get 0.45 
 
 ### The combining rule
 
-**The rule:** Use an equal-weighted average of the model signal and the style signal. If the two signals disagree by more than 0.40, the result is not allowed to reach the high-confidence AI label: it is capped just below the AI threshold, so a split can produce "unsure" but never "AI". The cap only works in one direction. A low score is left alone, so a split can still produce "human". One signal on its own isn't enough to accuse a writer, because a wrong accusation costs the writer far more than a missed detection costs the site.
+**The rule:** `scoring.py::combine_signals` Use an equal-weighted average of the model signal and the style signal. If the two signals disagree by more than 0.40, the result is not allowed to reach the high-confidence AI label: it is capped just below the AI threshold, so a split can produce "unsure" but never "AI". The cap only works in one direction. A low score is left alone, so a split can still produce "human". One signal on its own isn't enough to accuse a writer, because a wrong accusation costs the writer far more than a missed detection costs the site.
 
 **The numbers:**
 
@@ -221,15 +221,15 @@ The original decision is left exactly as it was; the appeal is a second entry be
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to help me brainstorm how to modify my signals to handle the blindspot for plain, simple human-text being mislabelled.
+- *What came back:* Suggestion to add abstract vocabulary and transition rate to `style_signal` as it is the easier signal to deceive.
+- *What I changed:* Modified my `stylometry.py` file to add calculations for the above mentioned measurements an dadded them to my style_score calculation.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* generate code for the /appeal endpoint
+- *What came back:* working code, that was missing the check for empty `content_id`
+- *What I changed:* Added the necessary checks for empty or whitespaces in `content_id` where a `400` error should be returned.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
