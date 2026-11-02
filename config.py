@@ -57,6 +57,11 @@ DETECTOR_MAX_TOKENS = 400
 WEIGHT_MODEL_SIGNAL = 0.5
 WEIGHT_STYLE_SIGNAL = 0.5
 
+# When the two signals differ by more than this, the combined score can't reach
+# the high-confidence AI label — one signal on its own isn't enough to accuse a
+# writer. It can still reach the human label: clearing someone costs nothing.
+DISAGREEMENT_GAP = 0.40
+
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
 # Where one label becomes another. Scores run 0.0 (confidently human) to 1.0

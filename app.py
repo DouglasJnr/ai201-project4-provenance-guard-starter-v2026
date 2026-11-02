@@ -203,34 +203,47 @@ def submit():
     payload = request.get_json(silent=True) or {}
     text = payload.get("text")
     creator_id = payload.get("creator_id", "unknown")
-    
+
+    # Step 2 - JSON goes in: pull text and creator_id out of the body.
+    # Checked before the signals run, so a missing text is a 400, not a crash.
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"text\"."}), 400
+
     # Step 3 - one real signal that we first tested from the terminal
     # python detector.py "some text"
     import detector
+    import scoring
+    import stylometry
     model_score = detector.model_signal(text)
 
-    # Step 2 - JSON goes in: pulll text and creator_id out of the body
-    if not isinstance(text, str) or not text.strip():
-        return jsonify({"error": "bad_reqest", "message": "Send JSON with a non-empty \"text\"."}), 400
+    # Step 5 - the second signal: python stylometry.py "some text"
+    style_score = stylometry.style_signal(text)
 
-    # Step 4 - log the decision. The content_id is what /appeal needs later.
+    # Step 6 - combine them. The rule is in scoring.py::combine_signals.
+    combined_score = scoring.combine_signals(model_score, style_score)
+
+    # Step 4 / 7 - log the decision with both signals and the combined score.
+    # The content_id is what /appeal needs later.
     content_id = f"c_{uuid.uuid4().hex[:12]}"
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
         model_score=model_score,
+        style_score=style_score,
+        combined_score=combined_score,
         status="decided",
     )
 
-    # Step 1 - the route answers. Hardcoded without any logic yet.
+    # Guess and label stay placeholders until Milestone 5 (step 8).
     return jsonify({
         "content_id": content_id,
         "creator_id": creator_id,
         "guess": "unsure",
-        "confidence": model_score,
+        "confidence": combined_score,
         "label": "not built yet",
         "model_score": model_score,
-        "style_score": None,
+        "style_score": style_score,
+        "combined_score": combined_score,
     }), 200
 
 

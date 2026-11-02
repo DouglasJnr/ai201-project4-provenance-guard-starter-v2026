@@ -69,20 +69,39 @@ There is no check whether the text is accurate, coherent, or original. It only c
 
 ### Signal two — the style signal
 
-**What it measures:** The statistical shape of the text without any understanding of any of it. It measure variation of sentence length, ratio of unique words to total text, and the punctuation density.
+**What it measures:** The statistical shape of the text without any understanding of any of it. Five measures, each mapped onto a 0–1 "AI-ness" scale between two anchor values and then combined by weight:
 
-**Why that might differ between human and AI writing:** AI text leans towards even, mid-length sentences and less varied band of vocabulary. Human writing is less structured, a four word sentence can be next to a thirty-word sentence, with more varied punctuation and broader vocabulary.
+| Measure | What it is | Maps to 1.0 (AI-like) | Maps to 0.0 (human-like) | Weight |
+|---|---|---|---|---|
+| Sentence length spread | std dev of sentence length ÷ mean | 0.2 or less | 1.0 or more | 0.30 |
+| Abstract vocabulary | share of words that are 9+ letters, or 7+ letters ending in -tion, -ment, -ity, -ness… | 0.20 or more | 0 | 0.30 |
+| Transition words | "first", "finally", "additionally", "moreover"… per word | 0.05 or more | 0 | 0.15 |
+| Punctuation density | commas, semicolons, colons, dashes, brackets, quotes, ! and ? per word (full stops and apostrophes not counted) | 0 | 0.10 or more | 0.15 |
+| Type-token ratio | unique words ÷ total words | 0.65 or less | 0.95 or more | 0.10 |
 
-**What it can't see:** It can't see the content. It is easily manipulated as any change of the text shape without any change to the substance of the text affects the score. Adding typos, varying punctuation, chopping up sentences and pasting quotations will dceive the model.
+Rhythm (spread + punctuation) and word choice (abstract + transitions) get 0.45 each. Type-token ratio gets only 0.10 because it falls as text gets longer, so across inputs of different lengths it measures length as much as vocabulary. A one-sentence text has no spread to measure, so that measure sits at a neutral 0.5; empty text scores 0.5 overall.
+
+**Why that might differ between human and AI writing:** AI text leans towards even, mid-length sentences and less varied band of vocabulary. Human writing is less structured, a four word sentence can be next to a thirty-word sentence, with more varied punctuation and broader vocabulary. AI explainer prose also leans on long abstract nouns ("prioritization", "environment") and listing scaffolding ("First… Second… Finally…"), where plain human writing uses short concrete words ("bus", "shelves").
+
+**Why the last two measures were added:** With only the first three, plain conventional human writing scored 0.86 on this signal, higher than the clearly-AI sample (0.63). Its sentences are even and it has almost no punctuation, so on rhythm alone it looks machine-made, and signal one rates it as AI-like too. Adding word-choice measures brought it down to 0.48.
+
+**What it can't see:** It can't see the content. It is easily manipulated as any change of the text shape without any change to the substance of the text affects the score. Adding typos, varying punctuation, chopping up sentences and pasting quotations will deceive it. The two word-choice measures add their own blind spots: formal and academic human writing uses long abstract words and scores as more AI-like, writers taught the five-paragraph essay use transition words just as AI does, and deleting the transition words takes seconds. Short texts are noisy: in "One sentence only." a single -ence word makes a third of the text count as abstract. The anchor values were tuned on four calibration texts, so they are a starting point, not a measured result.
 
 ### The combining rule
 
-<!-- Write the rule in words, then give the numbers. What happens when the two
-     signals disagree? -->
 
-**The rule:** Use an equal-weigthed average of the model signal and the style signal
 
-**The numbers:** `combined_score` = (0.5 x `model_score`) + (0.5 x `style_score`)
+**The rule:** Take an equal-weighted average of the model signal and the style signal. If the two signals disagree by more than 0.40, the result is not allowed to reach the high-confidence AI label: it is capped just below the AI threshold, so a split can produce "unsure" but never "AI". The cap only works in one direction. A low score is left alone, so a split can still produce "human". One signal on its own isn't enough to accuse a writer, because a wrong accusation costs the writer far more than a missed detection costs the site.
+
+**The numbers:**
+
+- `combined_score` = (0.5 × `model_score`) + (0.5 × `style_score`)
+- if |`model_score` − `style_score`| > 0.40: `combined_score` = min(`combined_score`, `AI_THRESHOLD` − 0.01) = min(`combined_score`, 0.64)
+- `WEIGHT_MODEL_SIGNAL = 0.5`, `WEIGHT_STYLE_SIGNAL = 0.5` and `DISAGREEMENT_GAP = 0.40` live in `config.py`.
+
+**Why equal weights:** The style signal is easier to game, which argues for weighting it lower. But on the calibration inputs the model signal only ranged from 0.57 to 0.75, while the style signal ranged from 0.11 to 0.77. Weighting toward the model signal would push nearly every score into "unsure".
+
+**Why the cap sits 0.01 below the threshold:** So the cap holds whether `score_to_label` compares with `>` or `>=`.
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -91,9 +110,20 @@ There is no check whether the text is accurate, coherent, or original. It only c
 
 **A case where my two signals split, and what my rule does with it:**
 
-In a case where the models disagree strongly, the combined score will produce a score the system labels as unsure because the two models disagree strongly. This is better than saying the writing is AI-generated based only on one signal.
+A model signal of 0.95 with a style signal of 0.45: text the language model finds very predictable, but with uneven sentences and concrete vocabulary. That's what AI text looks like after someone chops up its sentences, and also what very plain human writing with some variety looks like. The plain average is 0.70, which would be labelled AI. The signals differ by 0.50, more than the 0.40 gap, so the rule caps the score at 0.64 and the label is "unsure". The writer isn't accused on the strength of one signal.
 
-i.e model signal of 0.9 and style signal of 0.1: (0.5 x 0.9) + (0.5 x 0.1) = 0.5
+The opposite split behaves differently on purpose. A model signal of 0.05 with a style signal of 0.60 averages to 0.33, and the cap leaves it alone, so the label is "human".
+
+**What the rule can't fix:** When both signals are wrong in the same direction, they agree, and no combining rule can catch that. Plain human writing is the case: both signals see it as predictable and even. On the calibration inputs:
+
+| Input | model | style | combined | label |
+|---|---|---|---|---|
+| clearly AI | 0.75 | 0.77 | 0.76 | AI |
+| clearly human | 0.57 | 0.11 | 0.34 | human |
+| plain human | 0.72 | 0.47 | 0.60 | unsure |
+| lightly edited AI | 0.62 | 0.58 | 0.60 | unsure |
+
+Plain human writing now lands in "unsure" rather than "AI", but only because of the word-choice measures added to the style signal, not because of the combining rule. It still scores the same as lightly edited AI. The clearly human text sits just under the 0.35 human threshold, because the model signal rates it 0.57, above neutral.
 
 
 

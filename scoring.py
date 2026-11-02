@@ -52,11 +52,18 @@ def combine_signals(model_score: float, style_score: float) -> float:
     The weights in config.py are placeholders. Change them, or ignore them and
     write a different rule.
     """
-    # TODO: replace this
-    return (
+    
+    combined = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
     )
+
+    if abs(model_score - style_score) > config.DISAGREEMENT_GAP:
+        # 0.01 below the threshold, so the cap holds whether score_to_label
+        # compares with > or >=.
+        combined = min(combined, config.AI_THRESHOLD - 0.01)
+
+    return round(min(max(combined, 0.0), 1.0), 4)
 
 
 def score_to_label(score: float) -> tuple[str, str]:
@@ -85,7 +92,6 @@ def score_to_label(score: float) -> tuple[str, str]:
     think if they got it on their own work. That question is the whole
     milestone.
     """
-    # TODO: replace this — thresholds are in config.py
     if score >= config.AI_THRESHOLD:
         return "ai", "PLACEHOLDER — write the high-confidence AI label."
     if score <= config.HUMAN_THRESHOLD:
