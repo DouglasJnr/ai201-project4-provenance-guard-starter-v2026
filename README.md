@@ -419,6 +419,37 @@ Bad Input, trial 1 `run_eval.py::main` posting to `app.py::submit`:
      Look for a pattern. Five failures on one signal is one problem, not five. -->
 
 
+**1. Plain and formal human writing labelled AI — signal one and combining rule** Covers criterion 2 (human side 1 / 5), criterion 3 (only 2 `human` labels out of expected 5), and FP01–FP07. `detector.py::model_signal` turns low perplexity into a high AI score, and GPT-2 finds plain, formal, rubric-shaped, technical and careful non-native English predictable: FP01–FP07 scored 0.62–0.88 on signal one. Signal two
+doesn't pull them back, because `stylometry.py::style_signal` rewards the same
+things formal writing has: abstract nouns, transition words, even sentence
+lengths. FP02 (0.73) and FP04 (0.81) scored AI on both. The combining rule's
+safety net, `scoring.py::combine_signals` capping the score when the signals
+differ by more than 0.40, fires only on FP07 (gap 0.45), which is why FP07
+stopped at 0.64 `unsure`. Everywhere else the gaps were 0.01–0.32 (FP03 0.17,
+criterion 3 text 5 0.23), so the cap never applied. On the criterion 2 and 3 human texts that missed, both signals sit in the middle: model 0.34–0.77,
+style 0.42–0.56. The average of two middling scores lands in `unsure`, and
+`human` needs it below 0.35, so the human label is only reachable when both
+signals are low. 
+
+**2. The route accepts text that isn't really text — the route.** Covers the
+criterion 5 short-text case and MF02–MF05. `app.py::submit` only checks that
+`text` is a non-empty string. It has no minimum length and no check that the
+text contains words.
+
+**3. Malformed request bodies aren't validated — the route.** Covers RQ07 and
+RQ06. `app.py::submit` does `request.get_json(silent=True) or {}`. A JSON
+array is truthy, so it gets through, and `.get` on a list raises
+`AttributeError`, giving a 500 (**RQ07**). `creator_id` is never type-checked,
+so an object was accepted and written into the audit log as
+`{"id": "x"}` (**RQ06**).
+
+**4. No size limit — the route, and signal one's token window.** Covers MF08
+and the criterion 5 huge-text case. The route accepts any length. Signal one
+truncates to `DETECTOR_MAX_TOKENS` (400), so only the first ~300 words are
+judged. MF08 (60,000 characters) and the 250,000-character criterion 5 body
+both hit the disagreement cap at 0.64 (model 0.99, style 0.40–0.45) instead
+of being rejected with a size-limit message. The criterion's 10-second limit
+also wasn't measured, which is a gap in the test, not a mechanism.
 
 ---
 
