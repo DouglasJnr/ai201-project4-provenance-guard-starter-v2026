@@ -1,0 +1,347 @@
+{
+  "run_at": "2026-11-08T22:14",
+  "trials": [
+    {
+      "trial": 1,
+      "valid_id": "c_89eafb9eeb70",
+      "untouched_id": "c_c97a8ab0d78c",
+      "results": [
+        {
+          "case": "valid appeal",
+          "sent": {
+            "content_id": "c_89eafb9eeb70",
+            "reasoning": "I wrote this myself about my own week."
+          },
+          "http": 200,
+          "response": {
+            "appealed_at": "2026-11-09T03:14:35+00:00",
+            "content_id": "c_89eafb9eeb70",
+            "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+            "original_guess": "human",
+            "status": "under_review"
+          },
+          "new_log_entries": [
+            {
+              "timestamp": "2026-11-09T03:14:35+00:00",
+              "content_id": "c_89eafb9eeb70",
+              "creator_id": "eval_appeal_t1_a",
+              "event": "appeal",
+              "status": "under_review",
+              "reasoning": "I wrote this myself about my own week."
+            }
+          ],
+          "watched_statuses_after": [
+            "decided",
+            "under_review"
+          ]
+        },
+        {
+          "case": "unknown id",
+          "sent": {
+            "content_id": "c_doesnotexist",
+            "reasoning": "I wrote this."
+          },
+          "http": 404,
+          "response": {
+            "error": "not_found",
+            "message": "No submission with content_id 'c_doesnotexist'."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing content_id",
+          "sent": {
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "empty content_id",
+          "sent": {
+            "content_id": "",
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing reasoning",
+          "sent": {
+            "content_id": "c_c97a8ab0d78c"
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "whitespace reasoning",
+          "sent": {
+            "content_id": "c_c97a8ab0d78c",
+            "reasoning": "   "
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "valid_id": "c_ea3f92b2b2db",
+      "untouched_id": "c_e071062f0c10",
+      "results": [
+        {
+          "case": "valid appeal",
+          "sent": {
+            "content_id": "c_ea3f92b2b2db",
+            "reasoning": "I wrote this myself about my own week."
+          },
+          "http": 200,
+          "response": {
+            "appealed_at": "2026-11-09T03:14:40+00:00",
+            "content_id": "c_ea3f92b2b2db",
+            "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+            "original_guess": "human",
+            "status": "under_review"
+          },
+          "new_log_entries": [
+            {
+              "timestamp": "2026-11-09T03:14:40+00:00",
+              "content_id": "c_ea3f92b2b2db",
+              "creator_id": "eval_appeal_t2_a",
+              "event": "appeal",
+              "status": "under_review",
+              "reasoning": "I wrote this myself about my own week."
+            }
+          ],
+          "watched_statuses_after": [
+            "decided",
+            "under_review"
+          ]
+        },
+        {
+          "case": "unknown id",
+          "sent": {
+            "content_id": "c_doesnotexist",
+            "reasoning": "I wrote this."
+          },
+          "http": 404,
+          "response": {
+            "error": "not_found",
+            "message": "No submission with content_id 'c_doesnotexist'."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing content_id",
+          "sent": {
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "empty content_id",
+          "sent": {
+            "content_id": "",
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing reasoning",
+          "sent": {
+            "content_id": "c_e071062f0c10"
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "whitespace reasoning",
+          "sent": {
+            "content_id": "c_e071062f0c10",
+            "reasoning": "   "
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        }
+      ]
+    },
+    {
+      "trial": 3,
+      "valid_id": "c_bef6db0ce393",
+      "untouched_id": "c_68a82b25f9a0",
+      "results": [
+        {
+          "case": "valid appeal",
+          "sent": {
+            "content_id": "c_bef6db0ce393",
+            "reasoning": "I wrote this myself about my own week."
+          },
+          "http": 200,
+          "response": {
+            "appealed_at": "2026-11-09T03:14:47+00:00",
+            "content_id": "c_bef6db0ce393",
+            "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+            "original_guess": "human",
+            "status": "under_review"
+          },
+          "new_log_entries": [
+            {
+              "timestamp": "2026-11-09T03:14:47+00:00",
+              "content_id": "c_bef6db0ce393",
+              "creator_id": "eval_appeal_t3_a",
+              "event": "appeal",
+              "status": "under_review",
+              "reasoning": "I wrote this myself about my own week."
+            }
+          ],
+          "watched_statuses_after": [
+            "decided",
+            "under_review"
+          ]
+        },
+        {
+          "case": "unknown id",
+          "sent": {
+            "content_id": "c_doesnotexist",
+            "reasoning": "I wrote this."
+          },
+          "http": 404,
+          "response": {
+            "error": "not_found",
+            "message": "No submission with content_id 'c_doesnotexist'."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing content_id",
+          "sent": {
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "empty content_id",
+          "sent": {
+            "content_id": "",
+            "reasoning": "I wrote this."
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"content_id\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "missing reasoning",
+          "sent": {
+            "content_id": "c_68a82b25f9a0"
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        },
+        {
+          "case": "whitespace reasoning",
+          "sent": {
+            "content_id": "c_68a82b25f9a0",
+            "reasoning": "   "
+          },
+          "http": 400,
+          "response": {
+            "error": "bad_request",
+            "message": "Send JSON with a non-empty \"reasoning\"."
+          },
+          "new_log_entries": [],
+          "watched_statuses_after": [
+            "decided"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -300,17 +300,106 @@ whose work got caught by it:
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. Own writing flagged as AI | <=1 of 10 | 0 / 10  | 0 / 10 | 0 / 10  | MET |
+| 2. Score spread | ≥ 4 / 5 clearly-AI score ≥ 0.65 **and** ≥ 4 / 5 clearly-human score ≤ 0.35 | 6 / 10 | 6 / 10 | 6 / 10 | MISSED |
+| 3. Label coverage | ≥ 4 each of `human`, `unsure`, `ai` | 2 human · 7 unsure · 6 ai | 2 human · 7 unsure · 6 ai | 2 human · 7 unsure · 6 ai | MISSED |
+| 4. Appeal path always changes status| 6 / 6 | 6 / 6 | 6 / 6 | 6 / 6 | MET |
+| 5. Handled Bad input cases | 7 / 7 | 5 / 7 | 5 / 7 | 5 / 7 | MISSED |
+
+All three trials returned identical scores for every input, so no result
+changed from trial to trial. Source: `results/run_2026-11-08_2028_before.md`.
+
+Criterion 4 isn't covered by `run_eval.py`, which only posts to `/submit`. I
+tested it with `run_appeals.py` against the running service (2026-11-08
+22:14), three trials. Each trial submitted two fresh texts, appealed the first
+one properly, then sent five bad appeals (unknown id, missing id, empty id,
+missing reasoning, whitespace-only reasoning) aimed at the second. After every
+request I checked the new lines in `logs/audit.jsonl` and the second
+submission's status. Raw output: `results/appeal_run_2026-11-08.json`.
+
+
 
 **Real output from one trial**, pasted as text, naming the file and function
-that produced it:
+that produced it — `run_eval.py::main` posting to `app.py::submit`, criterion 3
+trial 1, text 5 (a clearly-human text labelled AI):
+
+My own writing, trial 1 `run_eval.py::main` posting to `app.py::submit`:
+```json
+{
+  "status": 200,
+  "guess": "ai",
+  "confidence": 0.6549,
+  "model_score": 0.7674,
+  "style_score": 0.5424,
+  "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.",
+  "sent": "For the next month I found myself attend"
+}
+```
+
+Score spread, trial 1 `run_eval.py::main` posting to `app.py::submit`:
+```json
+{
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.3473,
+    "model_score": 0.2992,
+    "style_score": 0.3954,
+    "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.",
+    "sent": "An hour until kick-off, the announcement of the team line-ups saw the "
+  },
+```
+
+label coverage, trial 1 `run_eval.py::main` posting to `app.py::submit`:
+```json
+{
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.3415,
+    "model_score": 0.2492,
+    "style_score": 0.4338,
+    "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.",
+    "sent": " I initially began as the introverted and reserved version of myself, "
+  },
+```
+
+Valid appeal, trial 1 — response from `app.py::appeal`:
 
 ```json
+{
+  "appealed_at": "2026-11-09T03:14:35+00:00",
+  "content_id": "c_89eafb9eeb70",
+  "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+  "original_guess": "human",
+  "status": "under_review"
+}
+```
 
+and the line it appended to `logs/audit.jsonl` via `audit.py::log_appeal`:
+
+```json
+{"timestamp": "2026-11-09T03:14:35+00:00", "content_id": "c_89eafb9eeb70", "creator_id": "eval_appeal_t1_a", "event": "appeal", "status": "under_review", "reasoning": "I wrote this myself about my own week."}
+```
+
+Unknown id, trial 1 — HTTP 404, nothing logged:
+
+```json
+{
+  "error": "not_found",
+  "message": "No submission with content_id 'c_doesnotexist'."
+}
+```
+
+Bad Input, trial 1 `run_eval.py::main` posting to `app.py::submit`:
+```json
+{
+    "status": 400,
+    "guess": null,
+    "confidence": null,
+    "model_score": null,
+    "style_score": null,
+    "label": null,
+    "sent": "{\"text\": 12345, \"creator_id\": \"eval_bad_nonstring\"}"
+  },
 ```
 
 **Diagnoses**
