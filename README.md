@@ -231,6 +231,12 @@ The original decision is left exactly as it was; the appeal is a second entry be
 - *What came back:* working code, that was missing the check for empty `content_id`
 - *What I changed:* Added the necessary checks for empty or whitespaces in `content_id` where a `400` error should be returned.
 
+**Moment 3**
+
+- *What I asked for:* asked claude to write a script to test my appeal path for criterion 4 testing
+- *What came back:* generated `run_appeals.py` that submits two pieces of text each trial, with the first getting a proper appeal and the second getting five bad ones. After every request it records the HTTP status, the response, any new llines in the audit log and the secind submission's status.
+- *What I changed:* I did not change anything as the script was working. I only verified that the results were accurate.
+
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
 ---
