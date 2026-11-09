@@ -158,8 +158,6 @@ def transition_rate(text: str) -> float:
     Catches the "First... Second... Finally... Additionally" scaffolding of
     generated text, which tends to survive light editing. 
 
-    Blind spot: writers taught the five-paragraph essay do exactly this, and
-    deleting the words is trivial.
     """
     tokens = words(text)
     if not tokens:

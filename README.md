@@ -237,13 +237,14 @@ The original decision is left exactly as it was; the appeal is a second entry be
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** _5__ per minute, __100_ per day
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
      times an hour, and a script sending a thousand variations to map your
      thresholds. Your numbers have to be liveable for the first and hostile to
      the second. -->
+     The 5 per minute stops bursts, probing, and sudden compute spikes while allowing a real writer to resubmit corrections to their work. The 100 per day acts as a slow window to control cumulative resource usage without limiting short activity. The combination catches burst and sustained abuse.
 
 **What a caller counts as:** <!-- per address, or per creator_id? They fail
 differently — one script can look like a thousand callers, and one household
@@ -254,6 +255,7 @@ can look like one. -->
 <!-- python run_attacks.py --flood 15 -->
 
 ```
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
 
 ```
 
@@ -271,13 +273,24 @@ can look like one. -->
 <!-- Choose entries that show the interesting failures, not the ten easiest. -->
 
 ```json
-
+{"timestamp": "2026-11-05T02:30:40+00:00", "content_id": "c_a8183384c2b8", "creator_id": "attacker_EV05", "guess": "human", "model_score": 0.3212, "style_score": 0.3323, "combined_score": 0.3267, "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:40+00:00", "content_id": "c_0b2a1af5277c", "creator_id": "attacker_FP01", "guess": "unsure", "model_score": 0.6175, "style_score": 0.4193, "combined_score": 0.5184, "label": "It is unclear whether this was written by a human or AI. Certain parts are consistent with human written text, and others are consistent with AI-generated text. If you wrote this yourself you don't need to do anything.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_43dcc32e959a", "creator_id": "attacker_FP02", "guess": "ai", "model_score": 0.7387, "style_score": 0.7318, "combined_score": 0.7352, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_7333586bc4a8", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.6401, "combined_score": 0.7226, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_203a2bbd64b1", "creator_id": "attacker_FP04", "guess": "ai", "model_score": 0.8329, "style_score": 0.8096, "combined_score": 0.8213, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_114d5e0e1ea5", "creator_id": "attacker_FP05", "guess": "ai", "model_score": 0.8005, "style_score": 0.5639, "combined_score": 0.6822, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_5faecf67e606", "creator_id": "attacker_FP06", "guess": "ai", "model_score": 0.8814, "style_score": 0.5663, "combined_score": 0.7238, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:41+00:00", "content_id": "c_3855412c0594", "creator_id": "attacker_FP07", "guess": "unsure", "model_score": 0.8816, "style_score": 0.4271, "combined_score": 0.64, "label": "It is unclear whether this was written by a human or AI. Certain parts are consistent with human written text, and others are consistent with AI-generated text. If you wrote this yourself you don't need to do anything.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:42+00:00", "content_id": "c_1324e81401f0", "creator_id": "attacker_MF03", "guess": "human", "model_score": 0.0, "style_score": 0.3, "combined_score": 0.15, "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:42+00:00", "content_id": "c_08c1f3c752a4", "creator_id": "attacker_MF04", "guess": "human", "model_score": 0.0112, "style_score": 0.5, "combined_score": 0.2556, "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:42+00:00", "content_id": "c_25dbc879352b", "creator_id": "attacker_MF05", "guess": "ai", "model_score": 0.9976, "style_score": 0.6, "combined_score": 0.7988, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:43+00:00", "content_id": "c_b8601c54763c", "creator_id": {"id": "x"}, "guess": "human", "model_score": 0.0492, "style_score": 0.3, "combined_score": 0.1746, "label": "The text was most likely written by a human as it shows no patterns consistent with those present in AI-generated text.", "status": "decided"}
+{"timestamp": "2026-11-05T02:30:43+00:00", "creator_id": "attacker_RQ12", "event": "rejected", "status": "rejected", "reason": "invalid_text"}
 ```
 
 **The single worst outcome** — the one I'd least want to explain to a writer
-whose work got caught by it:
-
-
+whose work got caught by it: 
+`FP03` because it classified a non-native english speaker's careful writing as AI with a score 0f 0.723. It is harmful because the sustem is mistaking straightforward, carefully chosen English for machine-generated writing. It unfairly penalizes someone for their language background rather than detecting actual AI use.
 
 ---
 
