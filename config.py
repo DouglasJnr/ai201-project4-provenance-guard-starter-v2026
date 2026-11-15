@@ -11,6 +11,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 
+# Secrets (like REVIEWER_TOKEN) live in .env, which is gitignored. Load it
+# before any os.getenv below. A real environment variable wins over .env.
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
+
 
 # ─── The service ─────────────────────────────────────────────────────────────
 

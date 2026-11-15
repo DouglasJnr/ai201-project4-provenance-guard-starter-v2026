@@ -8,6 +8,9 @@ flask>=3.0,<4.0
 # Rate limiting — UNIT 8. The only new install in this pair.
 flask-limiter>=3.5,<4.0
 
+# Loads secrets (REVIEWER_TOKEN) from the gitignored .env file into config.py
+python-dotenv>=1.0,<2.0
+
 # Sending requests to your own service, for run_attacks.py
 requests>=2.31,<3.0
 
