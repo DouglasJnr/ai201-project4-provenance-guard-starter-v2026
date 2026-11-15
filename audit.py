@@ -25,7 +25,33 @@ from datetime import datetime, timezone
 
 import config
 
-_lock = threading.Lock()
+_lock = threading.RLock()           # was lock; lets a caller hold it across check + append
+
+def locked():
+    """Return the audit lock for coordinating compound operations."""
+    return _lock                    # with audit.locked():
+
+def current_status(content_id):
+    """Return the latest recorded status for a content item, if any."""
+    entries = entries_for(content_id)
+    return entries[-1].get("status") if entries else None
+
+def log_review(content_id, creator_id, reviewer_id, outcome, note, final_guess, final_label):
+    """
+    Record a review of an appeal. This is the final step in the audit log
+    lifecycle: a decision, an appeal, and a review of that appeal.
+    """
+    return _append({
+        "timestamp": _now(),
+        "content_id": content_id,
+        "creator_id": creator_id,
+        "event": "review",
+        "status": outcome,
+        "reviewer_id": reviewer_id,
+        "note": note,
+        "final_guess": final_guess,
+        "final_label": final_label,
+    })
 
 
 def _now() -> str:

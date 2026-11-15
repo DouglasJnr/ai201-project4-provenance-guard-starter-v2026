@@ -113,3 +113,10 @@ RATE_LIMIT_STORAGE = "memory://"
 LOG_DIR = ROOT / "logs"
 AUDIT_LOG = LOG_DIR / "audit.jsonl"
 RESULTS_DIR = ROOT / "results"
+
+
+# CAPSTONE
+
+REVIEWER_TOKEN = os.getenv("REVIEWER_TOKEN", "")
+REVIEW_OUTCOMES = ("upheld", "overturned")
+OVERTURNED_LABEL = "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."

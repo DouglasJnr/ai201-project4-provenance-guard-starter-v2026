@@ -24,6 +24,7 @@ Routes:
     GET  /health      is the service up, and is the model loaded
 """
 
+import hmac
 import uuid
 
 from flask import Flask, jsonify, request
@@ -314,6 +315,47 @@ def appeal():
         "original_guess": original.get("guess"),
         "appealed_at": entry["timestamp"],
     }), 200
+
+
+@app.post("/review")
+def review():
+    if not config.REVIEWER_TOKEN:
+        return jsonify(error="review_disabled"), 503
+    if not hmac.compare_digest(request.headers.get("X-Reviewer-Token", ""), config.REVIEWER_TOKEN):
+        return jsonify(error="unauthorized"), 401
+
+    p = request.get_json(silent=True)
+    if not isinstance(p, dict):
+        return jsonify(error="bad_request"), 400
+
+    cid = p.get("content_id")
+    reviewer_id = p.get("reviewer_id")
+    note = p.get("note")
+    outcome = p.get("outcome")
+    if (
+        not isinstance(cid, str) or not cid.strip()
+        or not isinstance(reviewer_id, str) or not reviewer_id.strip()
+        or not isinstance(note, str) or not note.strip()
+        or outcome not in config.REVIEW_OUTCOMES
+    ):
+        return jsonify(error="bad_request"), 400
+
+    cid = cid.strip()
+    reviewer_id = reviewer_id.strip()
+    note = note.strip()
+
+    with audit.locked():
+        entries = audit.entries_for(cid)
+        decision = next((e for e in reversed(entries) if e.get("status") == "decided"), None)
+        if not decision:
+            return jsonify(error="not_found"), 404
+        if entries[-1].get("status") != "under_review":
+            return jsonify(error="conflict", current_status=entries[-1].get("status")), 409
+        final_guess, final_label = (decision["guess"], decision["label"]) if outcome == "upheld" \
+                        else ("human", config.OVERTURNED_LABEL)
+        entry = audit.log_review(cid, decision["creator_id"], reviewer_id, outcome, note, final_guess, final_label)
+
+    return jsonify(content_id=cid, status=outcome, original_guess=decision["guess"], final_guess=final_guess, final_label=final_label, reviewed_at=entry["timestamp"]), 200
 
 
 # ── Already works ─────────────────────────────────────────────────────────────
