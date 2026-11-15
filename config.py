@@ -125,3 +125,11 @@ RESULTS_DIR = ROOT / "results"
 REVIEWER_TOKEN = os.getenv("REVIEWER_TOKEN", "")
 REVIEW_OUTCOMES = ("upheld", "overturned")
 OVERTURNED_LABEL = "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."
+
+# ─── Payload shape ───────────────────────────────────────────────────────────
+# Fewest whitespace-separated words /submit will score. Each word becomes at
+# least one model token, so 3 words guarantees the 3 tokens that
+# detector.perplexity needs. Anything shorter is rejected before it gets there.
+SUBMIT_MIN_WORDS = 3
+# Longest creator_id accepted. It's written into every log line.
+CREATOR_ID_MAX_CHARS = 100

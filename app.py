@@ -35,6 +35,64 @@ import config
 app = Flask(__name__)
 
 
+# ── Payload shape ─────────────────────────────────────────────────────────────
+# One habit for every route: check the shape of the WHOLE payload before any
+# other code touches it. Past this point, fields have the types the code
+# expects, so neither a .get on a list nor a dict written to the log as a
+# creator can happen.
+
+def _json_object() -> dict | None:
+    """The request body if it's a JSON object, otherwise None.
+
+    get_json(silent=True) returns whatever parsed: a list, a string, a number,
+    or None. Only a dict has .get.
+    """
+    payload = request.get_json(silent=True)
+    return payload if isinstance(payload, dict) else None
+
+
+def _creator_for_log(payload: dict | None) -> str:
+    """A creator_id that is safe to write to the log, whatever was sent.
+
+    Only for rejection entries. Accepted submissions get a checked creator_id
+    from _validate_submission.
+    """
+    creator = payload.get("creator_id") if payload is not None else None
+    if isinstance(creator, str) and creator.strip():
+        return creator.strip()[:config.CREATOR_ID_MAX_CHARS]
+    return "unknown"
+
+
+def _validate_submission(payload: dict | None):
+    """Check every /submit field. Returns (text, creator_id, None) when valid,
+    or (None, None, (reason, message)) for the first problem found."""
+    if payload is None:
+        return None, None, ("body_not_object",
+                            'Send a JSON object like {"text": "...", "creator_id": "..."}.')
+
+    creator_id = payload.get("creator_id")
+    if creator_id is None:
+        creator_id = "unknown"
+    elif (not isinstance(creator_id, str) or not creator_id.strip()
+          or len(creator_id.strip()) > config.CREATOR_ID_MAX_CHARS):
+        return None, None, ("invalid_creator_id",
+                            f'"creator_id" must be a non-empty string of at most '
+                            f'{config.CREATOR_ID_MAX_CHARS} characters.')
+    else:
+        creator_id = creator_id.strip()
+
+    text = payload.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return None, None, ("invalid_text", 'Send JSON with a non-empty "text" string.')
+
+    # Prevents detector.perplexity's "fewer than 3 tokens" ValueError.
+    if len(text.split()) < config.SUBMIT_MIN_WORDS:
+        return None, None, ("text_too_short",
+                            f'"text" needs at least {config.SUBMIT_MIN_WORDS} words to be scored.')
+
+    return text, creator_id, None
+
+
 # ── Rate limiting — UNIT 8 ────────────────────────────────────────────────────
 # Off until you turn it on. In unit 8, Milestone 1:
 #
@@ -101,11 +159,8 @@ if config.RATE_LIMITING_ENABLED:
 
         ⚠️ An attack that shows up only as an absence is one you'll never find.
         """
-        payload = request.get_json(silent=True)
-        if not isinstance(payload, dict):
-            payload = {}
         audit.log_rejection(
-            creator_id=payload.get("creator_id", "unknown"),
+            creator_id=_creator_for_log(_json_object()),
             reason="rate_limited",
             limit=str(exc.description),
         )
@@ -201,25 +256,35 @@ def submit():
     a malformed input is one of the most common real failures there is.
     """
 
-    payload = request.get_json(silent=True) or {}
-    text = payload.get("text")
-    creator_id = payload.get("creator_id", "unknown")
-
-    # Step 2 - JSON goes in: pull text and creator_id out of the body.
-    # Checked before the signals run, so a missing text is a 400, not a crash.
-    if not isinstance(text, str) or not text.strip():
-        audit.log_rejection(
-            creator_id=creator_id,
-            reason="invalid_text",
-        )
-        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"text\"."}), 400
+    # Step 2 - JSON goes in. The whole payload is checked before the signals
+    # run, so a malformed body is a 400 with a reason in the log, not a crash.
+    payload = _json_object()
+    text, creator_id, problem = _validate_submission(payload)
+    if problem:
+        reason, message = problem
+        audit.log_rejection(creator_id=_creator_for_log(payload), reason=reason)
+        return jsonify({"error": "bad_request", "reason": reason, "message": message}), 400
 
     # Step 3 - one real signal that we first tested from the terminal
     # python detector.py "some text"
     import detector
     import scoring
     import stylometry
-    model_score = detector.model_signal(text)
+
+    # What model_signal can raise:
+    #   ValueError          - under 3 tokens. The minimum-word check makes this
+    #                         impossible; the catch is a second line of defence.
+    #   DetectorUnavailable - the model can't load. The server's fault, so 503.
+    try:
+        model_score = detector.model_signal(text)
+    except ValueError:
+        audit.log_rejection(creator_id=creator_id, reason="text_too_short")
+        return jsonify({"error": "bad_request", "reason": "text_too_short",
+                        "message": "This text is too short to score."}), 400
+    except detector.DetectorUnavailable:
+        audit.log_rejection(creator_id=creator_id, reason="detector_unavailable")
+        return jsonify({"error": "unavailable", "reason": "detector_unavailable",
+                        "message": "The checker isn't available right now. Try again later."}), 503
 
     # Step 5 - the second signal: python stylometry.py "some text"
     style_score = stylometry.style_signal(text)
@@ -277,7 +342,10 @@ def appeal():
     to the person on the other end. It's the only thing standing between a
     wrong accusation and nothing at all.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = _json_object()
+    if payload is None:
+        return jsonify({"error": "bad_request",
+                        "message": 'Send a JSON object like {"content_id": "...", "reasoning": "..."}.'}), 400
     content_id = payload.get("content_id")
     reasoning = payload.get("reasoning")
 
@@ -324,8 +392,8 @@ def review():
     if not hmac.compare_digest(request.headers.get("X-Reviewer-Token", ""), config.REVIEWER_TOKEN):
         return jsonify(error="unauthorized"), 401
 
-    p = request.get_json(silent=True)
-    if not isinstance(p, dict):
+    p = _json_object()
+    if p is None:
         return jsonify(error="bad_request"), 400
 
     cid = p.get("content_id")
