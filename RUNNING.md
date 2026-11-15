@@ -6,15 +6,6 @@ This is a **web service**. It runs on your machine and you talk to it with
 `curl` from another terminal. If you've not built a backend before, that's
 assumed — the starter ships one that already answers.
 
----
-
-## Run it from a fresh clone (local, with logs)
-
-This service runs **locally only**. The language model is too large for a free
-host (see [Running it somewhere else](#running-it-somewhere-else-unit-9)).
-Every decision, appeal, review and rejected request is written to an audit
-log on your disk. Follow these steps in order.
-
 ### 1. What you need
 
 | | |
@@ -28,7 +19,7 @@ log on your disk. Follow these steps in order.
 ### 2. Install
 
 ```bash
-git clone <this repo's URL>
+git clone https://github.com/DouglasJnr/ai201-project4-provenance-guard-starter-v2026 
 cd ai201-project4-provenance-guard-starter-v2026
 
 python3 -m venv .venv
@@ -82,8 +73,7 @@ curl http://127.0.0.1:5050/health
 ```
 
 `"detector_loaded": false` is normal until the first submission. That first
-submission takes 10–20 seconds while the model loads, and later ones take a
-second or two.
+submission takes 10–20 seconds while the model loads, and later ones should take a second or two.
 
 ### 5. Walk through every route
 
