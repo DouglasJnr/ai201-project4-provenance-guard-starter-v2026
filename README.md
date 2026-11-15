@@ -596,3 +596,131 @@ The system still misses criterion 2,3, and 5. FP attacks still get through, and 
 
 
 
+### Instrumentation
+
+Every request that reaches `/submit`, `/appeal`, or `/review` writes one JSON line to `logs/audit.jsonl` (see `audit.py`). Below are the ten most recent successful entries, copied straight from the log. They cover two complete capstone flows, each going submit → appeal (`under_review`) → review (`overturned`), plus four earlier decisions from the evaluation run.
+
+```jsonl
+{"timestamp": "2026-11-15T21:01:30+00:00", "content_id": "c_2f034a52bd13", "creator_id": "cost_cold", "guess": "ai", "model_score": 0.5705, "style_score": 0.7694, "combined_score": 0.67, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:30+00:00", "content_id": "c_2f034a52bd13", "creator_id": "cost_cold", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:30+00:00", "content_id": "c_2f034a52bd13", "creator_id": "cost_cold", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_3967cff030dc", "creator_id": "cost_typical_1", "guess": "ai", "model_score": 0.5705, "style_score": 0.7694, "combined_score": 0.67, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_3967cff030dc", "creator_id": "cost_typical_1", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_3967cff030dc", "creator_id": "cost_typical_1", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_1723a1d2711a", "creator_id": "cost_typical_2", "guess": "ai", "model_score": 0.5705, "style_score": 0.7694, "combined_score": 0.67, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_1723a1d2711a", "creator_id": "cost_typical_2", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:31+00:00", "content_id": "c_1723a1d2711a", "creator_id": "cost_typical_2", "event": "review", "status": "upheld", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "ai", "final_label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review."}
+{"timestamp": "2026-11-15T21:01:32+00:00", "content_id": "c_60d1d7213181", "creator_id": "cost_typical_3", "guess": "ai", "model_score": 0.5705, "style_score": 0.7694, "combined_score": 0.67, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:32+00:00", "content_id": "c_60d1d7213181", "creator_id": "cost_typical_3", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:32+00:00", "content_id": "c_60d1d7213181", "creator_id": "cost_typical_3", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:34+00:00", "content_id": "c_229dc376e6c3", "creator_id": "cost_typical_4", "guess": "ai", "model_score": 0.5705, "style_score": 0.7694, "combined_score": 0.67, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:34+00:00", "content_id": "c_229dc376e6c3", "creator_id": "cost_typical_4", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:34+00:00", "content_id": "c_229dc376e6c3", "creator_id": "cost_typical_4", "event": "review", "status": "upheld", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "ai", "final_label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review."}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_2a6af50602aa", "creator_id": "cost_worst_1", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_2a6af50602aa", "creator_id": "cost_worst_1", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_2a6af50602aa", "creator_id": "cost_worst_1", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_ba77135f7b29", "creator_id": "cost_worst_2", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_ba77135f7b29", "creator_id": "cost_worst_2", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:36+00:00", "content_id": "c_ba77135f7b29", "creator_id": "cost_worst_2", "event": "review", "status": "upheld", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "ai", "final_label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review."}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_173fd2bb5189", "creator_id": "cost_worst_3", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_173fd2bb5189", "creator_id": "cost_worst_3", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_173fd2bb5189", "creator_id": "cost_worst_3", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_0f4ea5c59a10", "creator_id": "cost_worst_4", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_0f4ea5c59a10", "creator_id": "cost_worst_4", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:37+00:00", "content_id": "c_0f4ea5c59a10", "creator_id": "cost_worst_4", "event": "review", "status": "upheld", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "ai", "final_label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review."}
+{"timestamp": "2026-11-15T21:01:40+00:00", "content_id": "c_05eacf1d53a0", "creator_id": "cost_worst_5", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:40+00:00", "content_id": "c_05eacf1d53a0", "creator_id": "cost_worst_5", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:40+00:00", "content_id": "c_05eacf1d53a0", "creator_id": "cost_worst_5", "event": "review", "status": "overturned", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "human", "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated."}
+{"timestamp": "2026-11-15T21:01:42+00:00", "content_id": "c_fc7317b97c2a", "creator_id": "cost_worst_6", "guess": "ai", "model_score": 0.997, "style_score": 0.8444, "combined_score": 0.9207, "label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review.", "status": "decided"}
+{"timestamp": "2026-11-15T21:01:42+00:00", "content_id": "c_fc7317b97c2a", "creator_id": "cost_worst_6", "event": "appeal", "status": "under_review", "reasoning": "Cost measurement: appeal step."}
+{"timestamp": "2026-11-15T21:01:42+00:00", "content_id": "c_fc7317b97c2a", "creator_id": "cost_worst_6", "event": "review", "status": "upheld", "reviewer_id": "cost_reviewer", "note": "Cost measurement: review step.", "final_guess": "ai", "final_label": "The text is likely AI as it shows patterns common in AI-generated text. We can't be certain and the check may be wrong especially about plain, simple writing. If you wrote this yourself and believe this is an error, you can submit an appeal for a member of our team to review."}
+
+```
+
+
+**Failed runs.**
+```jsonl
+{"timestamp": "2026-11-15T21:35:54+00:00", "creator_id": "unknown", "event": "rejected", "status": "rejected", "reason": "body_not_object", "route": "/submit", "http_status": 400}
+{"timestamp": "2026-11-15T21:35:54+00:00", "creator_id": "unknown", "event": "rejected", "status": "rejected", "reason": "body_not_object", "route": "/submit", "http_status": 400}
+```
+
+### What It Costs
+
+**What the cost actually is.** This system makes no API calls and spends no money per request. The model signal runs gpt2 locally, so the real cost of a run is compute time on the machine serving it. I measured seconds of compute for one full run of the capstone path: `/submit` → `/appeal` → `/review`.
+
+**How I measured it.** `measure_cost.py` sends the three requests to the real Flask app through Flask's test client, so every step goes through the same code as a curl request. It records:
+- **Wall time** (`time.perf_counter()`) for the whole run and for each step, which is how long the writer and reviewer wait.
+- **CPU time** (`time.process_time()`), which is CPU-seconds summed across every thread torch uses. This is the compute actually consumed.
+- How long `detector.model_signal` and `stylometry.style_signal` take inside `/submit`.
+
+Each run must get a 200 from all three steps and end with the item `overturned` or `upheld`; runs alternate between the two. The one-time model load is timed separately and left out of the average, because a running service pays it once at startup, not per run. Each run uses its own `creator_id`, so the 5/minute rate limit never blocks it. Only the HTTP socket is skipped, which is under a millisecond on loopback. The runs are logged to their own file, [logs/cost_2026-11-15_1601.jsonl](logs/cost_2026-11-15_1601.jsonl) (63 entries: decided, appeal and review for each of 21 runs), so the real `logs/audit.jsonl` only holds real requests.
+
+`/appeal` and `/review` each read the whole log to find the item, so their cost grows with the log. The cost log is small, so I also timed that lookup against the real `logs/audit.jsonl` (429 entries): **1.0 ms**.
+
+**Setup:** Apple M2, 8 GB RAM, Python 3.13.15, torch 2.15.0 (4 threads), transformers 4.57.6. Input: `samples/clearly_ai.json`, 91 words = 109 gpt2 tokens, plus a worst case padded to the model's 400-token cap. Command: `python measure_cost.py` (10 runs each). Full output: [results/cost_2026-11-15_1601.md](results/cost_2026-11-15_1601.md).
+
+**Result:**
+
+| One full run (submit → appeal → review) | Mean wall time | Mean CPU time | `/submit` | `/appeal` | `/review` |
+|---|---|---|---|---|---|
+| Typical (109 tokens) | **0.52 s** | 0.26 s | 0.52 s | 1.0 ms | 0.5 ms |
+| Worst case (400 tokens) | **0.83 s** | 0.64 s | 0.82 s | 2.1 ms | 0.8 ms |
+| Cold start (once per server start) | 7.06 s | 3.46 s | 7.06 s | 1 ms | 1 ms |
+
+Almost all of a run is the model: 98.9% of wall time. Appealing and reviewing add about 1.5 ms together, so completing the appeal path costs almost nothing compared with scoring the submission in the first place. The median run is 0.19 s; the mean is pulled up by a few runs of about 2.5 s (typical run 4, worst-case runs 5 and 6). Those are the machine paging the model back in from swap: this 8 GB laptop had 16.5 GB of swap in use.
+
+**An earlier measurement disagreed, and why.** My first measurement ([results/cost_2026-11-15_1544.md](results/cost_2026-11-15_1544.md), `/submit` only) averaged 5.34 s wall and 1.24 s CPU for the same text, about 10× slower. That ran while the machine had a load average of about 10 on 8 cores; this one ran at about 2.7. Wall time was 4× CPU time then, so most of each request was spent waiting for the CPU and memory, not computing. The cost of a run on this laptop depends heavily on what else is running. The numbers above are from the quieter machine and are the better estimate of what the system itself costs.
+
+#### typical: 91 words, 109 tokens read by the model
+
+| seconds | mean | median | min | max | stdev |
+|---|---|---|---|---|---|
+| **whole run, wall seconds** | 0.5230 | 0.1867 | 0.1181 | 2.5710 | 0.7628 |
+| whole run, CPU seconds | 0.2585 | 0.1912 | 0.1519 | 0.6326 | 0.1507 |
+| 1. /submit | 0.5215 | 0.1848 | 0.1172 | 2.5693 | 0.7626 |
+|   ↳ model signal | 0.5174 | 0.1801 | 0.1161 | 2.5647 | 0.7617 |
+|   ↳ style signal | 0.0005 | 0.0004 | 0.0002 | 0.0016 | 0.0004 |
+| 2. /appeal | 0.0010 | 0.0007 | 0.0005 | 0.0019 | 0.0006 |
+| 3. /review | 0.0005 | 0.0005 | 0.0004 | 0.0007 | 0.0001 |
+
+Model signal share of the whole run: 98.9%
+
+| run | content_id | outcome | wall | CPU | submit | model | appeal | review |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `c_3967cff030dc` | overturned | 0.4538 | 0.3380 | 0.4513 | 0.4380 | 0.0019 | 0.0005 |
+| 2 | `c_1723a1d2711a` | upheld | 0.2115 | 0.2031 | 0.2101 | 0.2023 | 0.0007 | 0.0006 |
+| 3 | `c_60d1d7213181` | overturned | 0.9284 | 0.3477 | 0.9260 | 0.9185 | 0.0017 | 0.0006 |
+| 4 | `c_229dc376e6c3` | upheld | 2.5710 | 0.6326 | 2.5693 | 2.5647 | 0.0012 | 0.0004 |
+| 5 | `c_6540376c14ff` | overturned | 0.4003 | 0.2541 | 0.3992 | 0.3980 | 0.0006 | 0.0005 |
+| 6 | `c_baa3f3e1ba22` | upheld | 0.1341 | 0.1644 | 0.1331 | 0.1319 | 0.0006 | 0.0004 |
+| 7 | `c_7b901eafb4f8` | overturned | 0.1181 | 0.1519 | 0.1172 | 0.1161 | 0.0005 | 0.0004 |
+| 8 | `c_9af909899aab` | upheld | 0.1236 | 0.1557 | 0.1224 | 0.1205 | 0.0008 | 0.0004 |
+| 9 | `c_78573de2b60e` | overturned | 0.1276 | 0.1583 | 0.1267 | 0.1257 | 0.0005 | 0.0004 |
+| 10 | `c_da305187f80f` | upheld | 0.1620 | 0.1793 | 0.1595 | 0.1579 | 0.0018 | 0.0007 |
+
+#### worst case (400 tokens): 910 words, 400 tokens read by the model
+
+| seconds | mean | median | min | max | stdev |
+|---|---|---|---|---|---|
+| **whole run, wall seconds** | 0.8251 | 0.3993 | 0.2986 | 2.5302 | 0.8926 |
+| whole run, CPU seconds | 0.6430 | 0.5427 | 0.4640 | 1.1535 | 0.2311 |
+| 1. /submit | 0.8221 | 0.3981 | 0.2973 | 2.5263 | 0.8911 |
+|   ↳ model signal | 0.8151 | 0.3958 | 0.2956 | 2.5190 | 0.8862 |
+|   ↳ style signal | 0.0022 | 0.0013 | 0.0010 | 0.0085 | 0.0024 |
+| 2. /appeal | 0.0021 | 0.0009 | 0.0005 | 0.0055 | 0.0019 |
+| 3. /review | 0.0008 | 0.0006 | 0.0004 | 0.0019 | 0.0005 |
+
+Model signal share of the whole run: 98.8%
+
+| run | content_id | outcome | wall | CPU | submit | model | appeal | review |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `c_2a6af50602aa` | overturned | 0.5755 | 0.6511 | 0.5738 | 0.5672 | 0.0012 | 0.0004 |
+| 2 | `c_ba77135f7b29` | upheld | 0.3475 | 0.4900 | 0.3465 | 0.3443 | 0.0005 | 0.0004 |
+| 3 | `c_173fd2bb5189` | overturned | 0.3247 | 0.4826 | 0.3236 | 0.3215 | 0.0006 | 0.0004 |
+| 4 | `c_0f4ea5c59a10` | upheld | 0.5608 | 0.6338 | 0.5548 | 0.5410 | 0.0047 | 0.0011 |
+| 5 | `c_05eacf1d53a0` | overturned | 2.4876 | 1.1535 | 2.4800 | 2.4557 | 0.0055 | 0.0019 |
+| 6 | `c_fc7317b97c2a` | upheld | 2.5302 | 0.9587 | 2.5263 | 2.5190 | 0.0029 | 0.0009 |
+| 7 | `c_9578190438f1` | overturned | 0.4179 | 0.5689 | 0.4166 | 0.4144 | 0.0007 | 0.0005 |
+| 8 | `c_2298a3f265e0` | upheld | 0.2986 | 0.4640 | 0.2973 | 0.2956 | 0.0006 | 0.0006 |
+| 9 | `c_859148e0491c` | overturned | 0.3276 | 0.5112 | 0.3225 | 0.3152 | 0.0038 | 0.0010 |
+| 10 | `c_ac7bde5f137b` | upheld | 0.3808 | 0.5164 | 0.3795 | 0.3772 | 0.0007 | 0.0005 |

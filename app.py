@@ -93,6 +93,70 @@ def _validate_submission(payload: dict | None):
     return text, creator_id, None
 
 
+# ── Every failure leaves a line ───────────────────────────────────────────────
+# A refused request goes through _reject, so the log records it and the caller
+# gets a reason. Anything that crashes is caught by _unhandled_error below.
+
+def _reject(http_status: int, reason: str, message: str,
+            creator_id: str = "unknown", **extra):
+    """Log a refused request, then return the JSON error response for it.
+
+    A related content_id goes in `target_content_id`, never `content_id`. If a
+    rejection used `content_id`, entries_for() would see it as that item's
+    latest status, and a bad request could change a real item's state.
+    """
+    audit.log_rejection(creator_id=creator_id, reason=reason,
+                        route=request.path, http_status=http_status, **extra)
+    body = {"error": reason, "reason": reason, "message": message}
+    body.update({k: v for k, v in extra.items() if k == "current_status"})
+    return jsonify(body), http_status
+
+
+@app.errorhandler(Exception)
+def _unhandled_error(exc):
+    """Any exception a route didn't handle: log it, then answer in JSON.
+
+    The 429 handler further down is more specific, so Flask uses that one for
+    rate limits. Other HTTP errors, such as an unknown path (404) or the wrong
+    method (405), are logged as rejections. Everything else is a real crash:
+    it's logged as an error with an error_id that is also sent to the caller,
+    so the response and the log line can be matched up.
+    """
+    from werkzeug.exceptions import HTTPException
+
+    creator_id = _creator_for_log(_json_object())
+
+    if isinstance(exc, HTTPException):
+        try:
+            return _reject(exc.code or 500, f"http_{exc.code}", exc.description or exc.name,
+                           creator_id=creator_id)
+        except Exception:  # noqa: BLE001 - the log itself failed; still answer
+            app.logger.exception("Could not write rejection to the audit log")
+            return jsonify(error=f"http_{exc.code}", message=exc.description), exc.code
+
+    error_id = f"e_{uuid.uuid4().hex[:12]}"
+    # The traceback still goes to the terminal, which is where you debug.
+    app.logger.exception("Unhandled error %s on %s", error_id, request.path)
+
+    tb = exc.__traceback__
+    while tb is not None and tb.tb_next is not None:
+        tb = tb.tb_next
+    where = f"{tb.tb_frame.f_code.co_filename.rsplit('/', 1)[-1]}:{tb.tb_lineno}" if tb else "?"
+
+    try:
+        audit.log_error(creator_id=creator_id, route=request.path, error_id=error_id,
+                        error_type=type(exc).__name__, message=str(exc), where=where)
+    except Exception:  # noqa: BLE001 - e.g. disk full; the terminal has it
+        app.logger.exception("Could not write error %s to the audit log", error_id)
+
+    return jsonify({
+        "error": "internal_error",
+        "message": "Something went wrong on our side. Nothing was decided. "
+                   "Quote this error_id if you report it.",
+        "error_id": error_id,
+    }), 500
+
+
 # ── Rate limiting — UNIT 8 ────────────────────────────────────────────────────
 # Off until you turn it on. In unit 8, Milestone 1:
 #
@@ -162,6 +226,8 @@ if config.RATE_LIMITING_ENABLED:
         audit.log_rejection(
             creator_id=_creator_for_log(_json_object()),
             reason="rate_limited",
+            route=request.path,
+            http_status=429,
             limit=str(exc.description),
         )
         return jsonify({
@@ -262,8 +328,7 @@ def submit():
     text, creator_id, problem = _validate_submission(payload)
     if problem:
         reason, message = problem
-        audit.log_rejection(creator_id=_creator_for_log(payload), reason=reason)
-        return jsonify({"error": "bad_request", "reason": reason, "message": message}), 400
+        return _reject(400, reason, message, creator_id=_creator_for_log(payload))
 
     # Step 3 - one real signal that we first tested from the terminal
     # python detector.py "some text"
@@ -278,13 +343,12 @@ def submit():
     try:
         model_score = detector.model_signal(text)
     except ValueError:
-        audit.log_rejection(creator_id=creator_id, reason="text_too_short")
-        return jsonify({"error": "bad_request", "reason": "text_too_short",
-                        "message": "This text is too short to score."}), 400
+        return _reject(400, "text_too_short", "This text is too short to score.",
+                       creator_id=creator_id)
     except detector.DetectorUnavailable:
-        audit.log_rejection(creator_id=creator_id, reason="detector_unavailable")
-        return jsonify({"error": "unavailable", "reason": "detector_unavailable",
-                        "message": "The checker isn't available right now. Try again later."}), 503
+        return _reject(503, "detector_unavailable",
+                       "The checker isn't available right now. Try again later.",
+                       creator_id=creator_id)
 
     # Step 5 - the second signal: python stylometry.py "some text"
     style_score = stylometry.style_signal(text)
@@ -344,23 +408,25 @@ def appeal():
     """
     payload = _json_object()
     if payload is None:
-        return jsonify({"error": "bad_request",
-                        "message": 'Send a JSON object like {"content_id": "...", "reasoning": "..."}.'}), 400
+        return _reject(400, "body_not_object",
+                       'Send a JSON object like {"content_id": "...", "reasoning": "..."}.')
     content_id = payload.get("content_id")
     reasoning = payload.get("reasoning")
 
-    # Both fields have to be real, non-empty strings. Nothing is logged and no
-    # status changes on a bad request.
+    # Both fields have to be real, non-empty strings. A bad request is logged
+    # as a rejection, but no status changes.
     if not isinstance(content_id, str) or not content_id.strip():
-        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"content_id\"."}), 400
+        return _reject(400, "invalid_content_id", 'Send JSON with a non-empty "content_id".')
     if not isinstance(reasoning, str) or not reasoning.strip():
-        return jsonify({"error": "bad_request", "message": "Send JSON with a non-empty \"reasoning\"."}), 400
+        return _reject(400, "invalid_reasoning", 'Send JSON with a non-empty "reasoning".',
+                       target_content_id=content_id.strip()[:64])
 
     # Step 1 - the content_id has to match a decision we actually made.
     content_id = content_id.strip()
     decisions = [e for e in audit.entries_for(content_id) if e.get("status") == "decided"]
     if not decisions:
-        return jsonify({"error": "not_found", "message": f"No submission with content_id {content_id!r}."}), 404
+        return _reject(404, "not_found", f"No submission with content_id {content_id[:64]!r}.",
+                       target_content_id=content_id[:64])
 
     # Step 2 - record the appeal beside the original decision. The creator
     # comes from that decision, not the payload, so an appeal can't be filed
@@ -388,13 +454,15 @@ def appeal():
 @app.post("/review")
 def review():
     if not config.REVIEWER_TOKEN:
-        return jsonify(error="review_disabled"), 503
+        return _reject(503, "review_disabled", "Reviews are switched off: no REVIEWER_TOKEN is set.")
+    # A failed token check is logged without the token that was sent.
     if not hmac.compare_digest(request.headers.get("X-Reviewer-Token", ""), config.REVIEWER_TOKEN):
-        return jsonify(error="unauthorized"), 401
+        return _reject(401, "unauthorized", "Missing or wrong X-Reviewer-Token header.")
 
     p = _json_object()
     if p is None:
-        return jsonify(error="bad_request"), 400
+        return _reject(400, "body_not_object",
+                       'Send a JSON object with "content_id", "reviewer_id", "outcome" and "note".')
 
     cid = p.get("content_id")
     reviewer_id = p.get("reviewer_id")
@@ -406,7 +474,9 @@ def review():
         or not isinstance(note, str) or not note.strip()
         or outcome not in config.REVIEW_OUTCOMES
     ):
-        return jsonify(error="bad_request"), 400
+        return _reject(400, "invalid_review",
+                       '"content_id", "reviewer_id" and "note" must be non-empty strings, and '
+                       f'"outcome" one of {list(config.REVIEW_OUTCOMES)}.')
 
     cid = cid.strip()
     reviewer_id = reviewer_id.strip()
@@ -416,9 +486,13 @@ def review():
         entries = audit.entries_for(cid)
         decision = next((e for e in reversed(entries) if e.get("status") == "decided"), None)
         if not decision:
-            return jsonify(error="not_found"), 404
+            return _reject(404, "not_found", f"No submission with content_id {cid[:64]!r}.",
+                           target_content_id=cid[:64])
         if entries[-1].get("status") != "under_review":
-            return jsonify(error="conflict", current_status=entries[-1].get("status")), 409
+            current = entries[-1].get("status")
+            return _reject(409, "conflict", f"Only items under_review can be reviewed; this one is {current!r}.",
+                           creator_id=decision.get("creator_id", "unknown"),
+                           target_content_id=cid, current_status=current)
         final_guess, final_label = (decision["guess"], decision["label"]) if outcome == "upheld" \
                         else ("human", config.OVERTURNED_LABEL)
         entry = audit.log_review(cid, decision["creator_id"], reviewer_id, outcome, note, final_guess, final_label)

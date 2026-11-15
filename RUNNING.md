@@ -22,7 +22,7 @@ assumed — the starter ships one that already answers.
 git clone https://github.com/DouglasJnr/ai201-project4-provenance-guard-starter-v2026 
 cd ai201-project4-provenance-guard-starter-v2026
 
-python3 -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
@@ -131,7 +131,13 @@ an appeal or review is added as a new line after the original decision.
 | `status: "decided"` | `/submit` scored a text. It has `model_score`, `style_score`, `combined_score`, `guess` and `label` |
 | `event: "appeal"`, `status: "under_review"` | a writer appealed |
 | `event: "review"`, `status: "upheld"` or `"overturned"` | a reviewer resolved an appeal. It has `reviewer_id`, `note`, `final_guess` and `final_label` |
-| `event: "rejected"` | a request was refused. `reason` says why: `rate_limited`, `body_not_object`, `invalid_creator_id`, `invalid_text`, `text_too_short` or `detector_unavailable` |
+| `event: "rejected"` | any route refused a request on purpose. It has `route`, `http_status` and a `reason`, such as `rate_limited`, `body_not_object`, `invalid_text`, `text_too_short`, `detector_unavailable`, `unauthorized`, `not_found`, `conflict`, or `http_404` / `http_405` for an unknown path or wrong method |
+| `event: "error"` | a request **crashed** (HTTP 500). It has `route`, `error_type`, `message`, `where` (file and line) and an `error_id`. The same `error_id` is in the 500 response, so the two can be matched. The full traceback is printed in the terminal running `app.py` |
+
+Every request that fails leaves a line: a refused or crashed request is never
+missing from the log. Rejections and errors never carry a `content_id` key; a
+related ID goes in `target_content_id` instead. So a bad request can't change
+a submission's status.
 
 Ways to read it:
 
@@ -140,6 +146,7 @@ curl "http://127.0.0.1:5050/log?limit=20"           # through the service
 tail -f logs/audit.jsonl                             # watch it live while you send requests
 grep '"c_PASTE_ID_HERE"' logs/audit.jsonl            # one submission's full history
 jq -c 'select(.event == "rejected")' logs/audit.jsonl   # every rejected request (needs jq)
+jq -c 'select(.event == "error")' logs/audit.jsonl      # every crash (needs jq)
 ```
 
 **The repo ships with the author's log.** It's committed on purpose as the
@@ -194,6 +201,7 @@ your whole network.
 | `404` | That `content_id` doesn't exist in the log |
 | `409` | `/review` on something that isn't `under_review`, e.g. never appealed or already reviewed |
 | `429` | The rate limit was hit. Wait a minute |
+| `500` | A crash. The response has an `error_id`. Find the matching `event: "error"` line in the log, and the traceback in the `app.py` terminal |
 | `503` | `review_disabled`: no `REVIEWER_TOKEN` in `.env`. `detector_unavailable`: the model can't load, so run `python detector.py` |
 
 ---
@@ -304,6 +312,7 @@ this repo `/submit` is built. A two-word text like the one above now gets a
 | `python run_attacks.py --flood 15` | Push past your rate limit and print the status codes — **unit 8** |
 | `python run_eval.py --label before` | Your five criteria, three trials — **unit 8** |
 | `python run_appeals.py --label before` | The appeal path (criterion 4), three trials |
+| `python measure_cost.py` | Seconds of compute per `/submit`: 10 warm runs plus the cold start. Doesn't need the server running and doesn't touch `logs/audit.jsonl` |
 
 ---
 

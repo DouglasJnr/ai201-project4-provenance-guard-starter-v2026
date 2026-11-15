@@ -36,6 +36,33 @@ def current_status(content_id):
     entries = entries_for(content_id)
     return entries[-1].get("status") if entries else None
 
+def log_error(creator_id: str, route: str, error_id: str, error_type: str,
+              message: str, where: str) -> dict:
+    """
+    Record a request that crashed: an unhandled exception that became a 500.
+
+    A rejection is a request we refused on purpose. An error is one we failed
+    to handle. Both leave a line, because a crash with no entry looks exactly
+    like a request that never arrived.
+
+    Never pass a `content_id` key here (same for rejections). entries_for()
+    treats the last entry with a content_id as that item's current status, so
+    a failure must not be able to change it.
+    """
+    return _append({
+        "timestamp": _now(),
+        "creator_id": creator_id,
+        "event": "error",
+        "status": "error",
+        "route": route,
+        "http_status": 500,
+        "error_id": error_id,
+        "error_type": error_type,
+        "message": message[:500],
+        "where": where,
+    })
+
+
 def log_review(content_id, creator_id, reviewer_id, outcome, note, final_guess, final_label):
     """
     Record a review of an appeal. This is the final step in the audit log
