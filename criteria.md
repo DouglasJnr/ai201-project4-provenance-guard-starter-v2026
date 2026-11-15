@@ -64,7 +64,9 @@ In a set of 15 texts— 5 clearly human, 5 borderline and 5 clearly AI—the sys
 
 **Why this target:** This verifies that all three labels are reachable and that the system can represent uncertainty instead of forcing every text into one category.
 
-
+> **Revised in unit 8:** of 15 texts (5 clearly human, 5 borderline, 5 clearly-AI), at least 4 in each group receive their expected label.
+>
+> **Why revised:** The original counted labels, not which text got them, which meant it could be scored per text and cold pass with the wrong texts in each label.
 ---
 
 ## 4. Appeal Path

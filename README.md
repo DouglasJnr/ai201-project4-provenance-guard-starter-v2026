@@ -586,3 +586,13 @@ The system still misses criterion 2,3, and 5. FP attacks still get through, and 
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
+
+
+## Capstone
+
+**The Shape:** I picked shape C, which is an extension of the `/appeal` path. This creates a reviewer decision endpoint to complete the path so that appeals are not just stuck in an `under_review` state. I will be adding a POST /review endpoint so a reviewer can close an appeal. I will aalso add an acces check so that only authorized users can review appeals.
+
+**What's Out of Scope:** I will not be rebuilding the interface or changing any other path. I will not add any new signal or modify any existing signal, and neither will I be adding an additional label.
+
+
+

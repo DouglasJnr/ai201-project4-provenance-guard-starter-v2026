@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "ai201-project4-provenance-guard-starter-v2026",
+			"path": "."
+		},
+		{
+			"name": "attack_set",
+			"path": "../Downloads/attack_set"
+		}
+	],
+	"settings": {}
+}
