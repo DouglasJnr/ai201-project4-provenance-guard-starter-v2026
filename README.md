@@ -646,6 +646,8 @@ Every request that reaches `/submit`, `/appeal`, or `/review` writes one JSON li
 
 ### What It Costs
 
+**Measured cost of one run: 0.52 seconds of wall time (0.26 CPU-seconds)** for one full submit → appeal → review run on a typical 91-word text. That's the mean of 10 runs. The worst case, a text long enough to hit the model's 400-token cap, is 0.83 s (0.64 CPU-s). API spend is $0 and no paid tokens are used.
+
 **What the cost actually is.** This system makes no API calls and spends no money per request. The model signal runs gpt2 locally, so the real cost of a run is compute time on the machine serving it. I measured seconds of compute for one full run of the capstone path: `/submit` → `/appeal` → `/review`.
 
 **How I measured it.** `measure_cost.py` sends the three requests to the real Flask app through Flask's test client, so every step goes through the same code as a curl request. It records:
@@ -668,6 +670,20 @@ Each run must get a 200 from all three steps and end with the item `overturned` 
 | Cold start (once per server start) | 7.06 s | 3.46 s | 7.06 s | 1 ms | 1 ms |
 
 Almost all of a run is the model: 98.9% of wall time. Appealing and reviewing add about 1.5 ms together, so completing the appeal path costs almost nothing compared with scoring the submission in the first place. The median run is 0.19 s; the mean is pulled up by a few runs of about 2.5 s (typical run 4, worst-case runs 5 and 6). Those are the machine paging the model back in from swap: this 8 GB laptop had 16.5 GB of swap in use.
+
+**At a hundred people a day.** Running this for 100 people a day would cost about one minute of compute on one laptop and $0 in API spend: 100 × 0.52 s + one 7.06 s model load = 59 s a day.
+
+The arithmetic assumes every person does a full run: submit, appeal and review. That's the upper bound, since most writers won't appeal, and appeal plus review is only 1.5 ms of each run anyway.
+
+| | per run | × 100 people | + 1 cold start | per day |
+|---|---|---|---|---|
+| Typical, wall | 0.52 s | 52 s | + 7.06 s | **59.1 s** |
+| Typical, CPU | 0.26 CPU-s | 26 CPU-s | + 3.46 CPU-s | **29.5 CPU-s** |
+| All worst case, wall | 0.83 s | 83 s | + 7.06 s | **90.1 s** |
+
+- 59.1 s ÷ 86,400 s in a day = **0.07%** of one machine's day. The laptop would be idle the other 99.93%.
+- Even if all 100 people arrived in the same minute, they would need 52 s of model time in that minute, so one machine still keeps up. They'd queue behind each other rather than get answers in parallel.
+- **The one cost that grows:** each run adds 3 log lines, so 100 people add 300 a day, or 109,500 a year. `/appeal` and `/review` read the whole log, and the lookup took 1.0 ms at 429 entries. If it scales linearly, a year in it would take 1.0 ms × 109,500 ÷ 429 ≈ **255 ms per appeal**. That's still small, but it would then be the second-largest cost after the model. Indexing the log by `content_id` would remove it.
 
 **An earlier measurement disagreed, and why.** My first measurement ([results/cost_2026-11-15_1544.md](results/cost_2026-11-15_1544.md), `/submit` only) averaged 5.34 s wall and 1.24 s CPU for the same text, about 10× slower. That ran while the machine had a load average of about 10 on 8 cores; this one ran at about 2.7. Wall time was 4× CPU time then, so most of each request was spent waiting for the CPU and memory, not computing. The cost of a run on this laptop depends heavily on what else is running. The numbers above are from the quieter machine and are the better estimate of what the system itself costs.
 
@@ -864,3 +880,25 @@ Criterion 8 went from 8/10 to **10/10 in all three trials**. In both cases the i
 
 
 ---
+
+## What's Still Broken
+
+The system now meets all the Capstone criteria. The only broken criteria are those left form the previous unit a I did not touch those.
+
+
+**The trade I'd make if this ran for real:**
+If this was real I would create an actual sign in for users with a database to authenticate users as just users or reviewers. Each would have their own privileges such as the reviewer being able to carry out reviews.
+
+## How I Used AI
+
+**Moment 1**
+
+- *What I asked for:* I asked Claude to build a script to run the reviews evaluation
+- *What came back:* a full script, `run_evals.py` that tested all the scenarios I had put in `scenarios.py`
+- *What I changed:* Modified a bit of the logic, but the script was working as intended.
+
+**Moment 2**
+
+- *What I asked for:* Asked Claude to generate a script that would measure what it costs to complete an entire run.
+- *What came back:* working code
+- *What I changed:* Nothing, only evaluated the results of the script for accuracy.
