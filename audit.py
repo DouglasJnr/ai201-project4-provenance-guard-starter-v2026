@@ -41,10 +41,6 @@ def log_error(creator_id: str, route: str, error_id: str, error_type: str,
     """
     Record a request that crashed: an unhandled exception that became a 500.
 
-    A rejection is a request we refused on purpose. An error is one we failed
-    to handle. Both leave a line, because a crash with no entry looks exactly
-    like a request that never arrived.
-
     Never pass a `content_id` key here (same for rejections). entries_for()
     treats the last entry with a content_id as that item's current status, so
     a failure must not be able to change it.

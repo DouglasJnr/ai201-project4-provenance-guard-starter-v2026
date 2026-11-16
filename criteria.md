@@ -119,3 +119,61 @@ Out of 5 cases with missing, empty, non-string, whitespace-only `text`, or text 
      A number you missed stays where it is, gets diagnosed, and gets a fix
      attempted. That's where the points are.
      ───────────────────────────────────────────────────────────────────────── -->
+
+---
+
+# Capstone criteria 
+
+
+## 6. A review resolves an appeal
+
+For 5 reviews, each review resolves the appeal by having `final_guess` being the original guess for `upheld` or `human` for `overturned`
+
+**Why this target:** The extension exists so an appeal doesn't sit in
+`under_review` forever. If even one valid review fails to close the item or
+leaves no record, the writer is back where they started, so the target is
+every case, not most of them.
+
+---
+
+## 7. Only a reviewer can review
+
+Out of 5 runs with invalid authorization, none of the reviews are accepted.
+
+
+**Why this target:** A review can overturn a decision, so if a writer can
+call `/review` they can clear their own label. One unauthorised success is a
+complete failure of the extension, which is why the target is zero. Failed
+attempts have to be logged because repeated 401s are how someone guessing
+the token would show up.
+
+---
+
+## 8. A reviewed decision is final, and bad review requests change nothing
+
+For every reviewed decision, the final status must remain unchanged, and any invalid or duplicate review request must be rejected without adding an appeal/review record or changing the item's status
+
+**Why this target:** A wrong accusation is the expensive mistake in this
+project, and an `overturned` review is the fix for it. That fix can't be
+undone by a second appeal followed by a different reviewer choosing
+`upheld`. The last two rows test that. Every refused request has to leave a
+line, because a failure that shows up only as an absence can't be diagnosed.
+
+---
+
+## 9. Prevent race condition
+
+For two valid reviews for the same `under_review` item sent at the same moment, every run out of 5 produces one line in the log with a `200` code. 
+
+
+**Why this target:** `/review` checks the status and then writes, and the
+Flask server handles requests in parallel threads. Without the lock around
+that check and write, both reviews could pass the check, and the log would
+say the item was both upheld and overturned. 
+---
+
+## 10. Crashes are still traceable
+
+Out of 5 tries where the system crashes, each crash is recorded in the log
+
+**Why this target:** every crash that goes unlogged just appears as though nothing ever happened. Logging each crash creates an audit trail showing what caused the failure, and an error ID or exceeption type to investigate.
