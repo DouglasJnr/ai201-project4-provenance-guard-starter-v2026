@@ -157,7 +157,7 @@ entries. To start with an empty log, run:
 python -c "import audit; print(audit.clear(), 'entries removed')"
 ```
 
-This deletes your working copy of the log. You can get the original back at
+This deletes the working copy of the log. You can get the original back at
 any time with `git checkout logs/audit.jsonl`.
 
 ### 7. Re-run the evidence
@@ -173,6 +173,7 @@ python run_attacks.py --set attack_set --url $URL --label rerun   # the full att
 python run_attacks.py --flood 15 --url $URL                         # shows 200s turning into 429s
 python run_eval.py --url $URL --label rerun                         # the five criteria, three trials
 python run_appeals.py --url $URL --label rerun                      # the appeal path, three trials
+python run_reviews.py. --label rerun                                # the review path, three trials
 ```
 
 The full attack set and the eval each take several minutes, because every
