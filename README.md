@@ -724,3 +724,143 @@ Model signal share of the whole run: 98.8%
 | 8 | `c_2298a3f265e0` | upheld | 0.2986 | 0.4640 | 0.2973 | 0.2956 | 0.0006 | 0.0006 |
 | 9 | `c_859148e0491c` | overturned | 0.3276 | 0.5112 | 0.3225 | 0.3152 | 0.0038 | 0.0010 |
 | 10 | `c_ac7bde5f137b` | upheld | 0.3808 | 0.5164 | 0.3795 | 0.3772 | 0.0007 | 0.0005 |
+
+### Capstone Criteria Results
+
+### Run Log - before
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 6. a review resolves an appeal | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 7. only a reviewer can review | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 8. a reviewed decision is final, and bad review requests change nothing | 10 of 10 | 8/10 | 8/10 | 8/10 | MISSED |
+| 9. two reviews at the same moment | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 10. crashes are still traceable | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+```json
+{
+    "case": "overturned (text 1)",
+    "content_id": "c_d016f1f7aeab",
+    "expect": "200, final_guess=human",
+    "http": 200,
+    "original_guess": "ai",
+    "final_guess": "human",
+    "status_after": "overturned",
+    "review_lines": 1,
+    "as_expected": true,
+    "response": {
+      "content_id": "c_d016f1f7aeab",
+      "final_guess": "human",
+      "final_label": "A member of our team reviwed your appeal and agreed with you that this writing was not AI generated.",
+      "original_guess": "ai",
+      "reviewed_at": "2026-11-16T01:48:46+00:00",
+      "status": "overturned"
+    }
+```
+
+```json
+{
+    "case": "no header",
+    "content_id": "c_8a817a1ce74e",
+    "expect": 401,
+    "http": 401,
+    "status_before": "under_review",
+    "status_after": "under_review",
+    "review_lines": 0,
+    "unauthorized_lines": 1,
+    "token_in_log": false,
+    "as_expected": true,
+    "response": {
+      "error": "unauthorized",
+      "message": "Missing or wrong X-Reviewer-Token header.",
+      "reason": "unauthorized"
+    }
+  },
+```
+
+```json
+{
+    "case": "appeal an under_review item again",
+    "route": "/appeal",
+    "content_id": "c_612dfff8dd1e",
+    "expect": 409,
+    "http": 200,
+    "status_before": "under_review",
+    "status_after": "under_review",
+    "item_lines_added": 1,
+    "rejected_lines": 0,
+    "as_expected": false,
+    "response": {
+      "appealed_at": "2026-11-16T01:49:44+00:00",
+      "content_id": "c_612dfff8dd1e",
+      "message": "Thanks, we've received your appeal. A person will review this decision, and your explanation is saved with it.",
+      "original_guess": "ai",
+      "status": "under_review"
+    }
+  },
+```
+
+```json
+{
+    "case": "run 1",
+    "content_id": "c_225657c769a2",
+    "expect": "one 200 + one 409, 1 review line",
+    "http": {
+      "overturned": 200,
+      "upheld": 409
+    },
+    "review_lines": 1,
+    "status_after": "overturned",
+    "as_expected": true
+  },
+```
+
+```json
+{
+    "case": "model signal crashes",
+    "route": "/submit",
+    "content_id": null,
+    "expect": 500,
+    "http": 500,
+    "error_id": "e_1c13010c0901",
+    "logged_error_type": "RuntimeError",
+    "logged_where": "run_reviews.py:280",
+    "error_lines": 1,
+    "status_before": null,
+    "status_after": null,
+    "as_expected": true,
+    "response": {
+      "error": "internal_error",
+      "error_id": "e_1c13010c0901",
+      "message": "Something went wrong on our side. Nothing was decided. Quote this error_id if you report it."
+    }
+  },
+```
+
+#### Diagnosis — criterion 8
+
+**What missed:** 
+Criterion 8 missed as any item that was already `under_review` returned a 200 instead of a 409. Appealing an item that had already been reviewed also returned 200, and the log shows its status going from `overturned` back to `under_review`. Step 1 of the `/appeal` route in app.py was where the the fault was coming from. Step 1 only checked whether a `decided` line existed anywhere in an items's history.
+
+
+#### The Improvement
+
+`/appeal` now reads the item's current status (the last log line carrying that `content_id`) and refuses with a **409 `conflict`** unless it is still `decided`. The check and the write both happen inside `with audit.locked():`, the same lock `/review` uses, so two simultaneous appeals can't both get through. Allowing only `decided` covers both cases with one rule: a pending appeal (`under_review`) and a finished review (`upheld` or `overturned`) are both refused.
+
+
+### Run Log - after
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 6. a review resolves an appeal | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 7. only a reviewer can review | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 8. a reviewed decision is final, and bad review requests change nothing | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| 9. two reviews at the same moment | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 10. crashes are still traceable | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+
+**Did it help, and how do I know:**
+
+Criterion 8 went from 8/10 to **10/10 in all three trials**. In both cases the item's status was the same before and after, no appeal or review line was added, and exactly one `rejected` line was written. Criteria 6, 7, 9 and 10 were unchanged at full marks. Criterion 4 (a first appeal on a fresh item returns 200 and sets `under_review`) is unaffected, because a freshly decided item still passes the new check.
+
+
+---

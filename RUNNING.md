@@ -199,7 +199,7 @@ your whole network.
 | `400` | The request's shape is wrong. The `reason` and `message` fields say exactly what. Examples: the body isn't a JSON object, `text` has fewer than 3 words, `creator_id` isn't a string |
 | `401` | `/review` without the right `X-Reviewer-Token` header |
 | `404` | That `content_id` doesn't exist in the log |
-| `409` | `/review` on something that isn't `under_review`, e.g. never appealed or already reviewed |
+| `409` | `/review` on something that isn't `under_review` (never appealed, or already reviewed), or `/appeal` on something that isn't `decided` (already appealed, or already reviewed) |
 | `429` | The rate limit was hit. Wait a minute |
 | `500` | A crash. The response has an `error_id`. Find the matching `event: "error"` line in the log, and the traceback in the `app.py` terminal |
 | `503` | `review_disabled`: no `REVIEWER_TOKEN` in `.env`. `detector_unavailable`: the model can't load, so run `python detector.py` |

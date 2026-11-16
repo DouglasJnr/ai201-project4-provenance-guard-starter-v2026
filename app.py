@@ -421,22 +421,42 @@ def appeal():
         return _reject(400, "invalid_reasoning", 'Send JSON with a non-empty "reasoning".',
                        target_content_id=content_id.strip()[:64])
 
-    # Step 1 - the content_id has to match a decision we actually made.
+    # Step 1 - the content_id has to match a decision we actually made, and
+    # that decision must still be only "decided": not already appealed, and not
+    # already reviewed. A reviewed decision is final; without this check an
+    # overturned item could be appealed again and then upheld by a second
+    # reviewer. 
     content_id = content_id.strip()
-    decisions = [e for e in audit.entries_for(content_id) if e.get("status") == "decided"]
-    if not decisions:
-        return _reject(404, "not_found", f"No submission with content_id {content_id[:64]!r}.",
-                       target_content_id=content_id[:64])
+    with audit.locked():
+        entries = audit.entries_for(content_id)
+        decisions = [e for e in entries if e.get("status") == "decided"]
+        if not decisions:
+            return _reject(404, "not_found", f"No submission with content_id {content_id[:64]!r}.",
+                           target_content_id=content_id[:64])
 
-    # Step 2 - record the appeal beside the original decision. The creator
-    # comes from that decision, not the payload, so an appeal can't be filed
-    # under someone else's name.
-    original = decisions[-1]
-    entry = audit.log_appeal(
-        content_id=content_id,
-        creator_id=original.get("creator_id"),
-        reasoning=reasoning.strip(),
-    )
+        original = decisions[-1]
+        # Rejections and errors never carry content_id, so the last entry is
+        # always a decision, appeal or review: the item's real current status.
+        current = entries[-1].get("status")
+        if current != "decided":
+            message = {
+                "under_review": "This decision has already been appealed and is waiting for review.",
+                "upheld": "This appeal has already been reviewed, and the original decision was kept.",
+                "overturned": "This appeal has already been reviewed, and the decision was overturned.",
+            }.get(current if isinstance(current, str) else "",
+                  "This decision can't be appealed right now.")
+            return _reject(409, "conflict", message,
+                           creator_id=original.get("creator_id", "unknown"),
+                           target_content_id=content_id, current_status=current)
+
+        # Step 2 - record the appeal beside the original decision. The creator
+        # comes from that decision, not the payload, so an appeal can't be filed
+        # under someone else's name.
+        entry = audit.log_appeal(
+            content_id=content_id,
+            creator_id=original.get("creator_id"),
+            reasoning=reasoning.strip(),
+        )
 
     # Step 3 - confirm to the writer.
     return jsonify({

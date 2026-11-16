@@ -10,11 +10,11 @@ Target from `criteria.md` and the Verdict yourself.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 6. a review resolves an appeal |  | 5/5 | 5/5 | 5/5 |  |
-| 7. only a reviewer can review |  | 5/5 | 5/5 | 5/5 |  |
-| 8. a reviewed decision is final, and bad review requests change nothing |  | 8/10 | 8/10 | 8/10 |  |
-| 9. two reviews at the same moment |  | 5/5 | 5/5 | 5/5 |  |
-| 10. crashes are still traceable |  | 5/5 | 5/5 | 5/5 |  |
+| 6. a review resolves an appeal | 5 of 5 | 5/5 | 5/5 | 5/5 | MET  |
+| 7. only a reviewer can review | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 8. a reviewed decision is final, and bad review requests change nothing | 10 of 10 | 8/10 | 8/10 | 8/10 | MISSED |
+| 9. two reviews at the same moment | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 10. crashes are still traceable | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
 
 ---
 

@@ -100,10 +100,6 @@ SCENARIOS = [
         {"text": "I walked to the shop this morning and it was raining, so I came back soaked and in a bad mood.", "creator_id": "eval_bad_short"},
         ],
     },
-
-    # Criteria 6-10 (the /review extension) aren't here either. Every one of
-    # them needs a content_id from /submit, then an appeal, then a review, so
-    # they live in REVIEW_SCENARIOS below and run_reviews.py runs them.
 ]
 
 
@@ -119,8 +115,6 @@ SCENARIOS = [
 # Every case says what it "expect"s back. The runner records what actually
 # came back next to it; whether the criterion passed is still your call.
 
-# Submitted fresh before each case. AI-ish text, so an overturned review
-# actually changes the guess (ai -> human) instead of leaving it the same.
 REVIEW_TEXT = (
     "Effective communication is a fundamental component of successful teamwork in any "
     "organization. First, clear communication ensures that team members understand their "
