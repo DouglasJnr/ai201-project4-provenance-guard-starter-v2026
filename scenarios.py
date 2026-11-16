@@ -101,12 +101,152 @@ SCENARIOS = [
         ],
     },
 
-    # TODO: add what your remaining criteria need.
-    #
-    # A criterion about the appeal path can't be tested by sending text alone;
-    # it needs a submission first and then an appeal against the content_id
-    # that came back. You'll need to test that one by hand, or extend this file
-    # and run_eval.py to do it. Saying which you did is part of the write-up.
+    # Criteria 6-10 (the /review extension) aren't here either. Every one of
+    # them needs a content_id from /submit, then an appeal, then a review, so
+    # they live in REVIEW_SCENARIOS below and run_reviews.py runs them.
+]
+
+
+# ── Capstone: criteria 6-10, the /review extension ───────────────────────────
+#
+# run_reviews.py runs these three times, in-process (no server needed), and
+# writes to logs/review_eval_<stamp>.jsonl, not to logs/audit.jsonl.
+#
+# Placeholders the runner fills in for each case:
+#   "{content_id}"  the item the case is about, made fresh for that case
+#   "{token}"       the real REVIEWER_TOKEN from .env (never written to results)
+#
+# Every case says what it "expect"s back. The runner records what actually
+# came back next to it; whether the criterion passed is still your call.
+
+# Submitted fresh before each case. AI-ish text, so an overturned review
+# actually changes the guess (ai -> human) instead of leaving it the same.
+REVIEW_TEXT = (
+    "Effective communication is a fundamental component of successful teamwork in any "
+    "organization. First, clear communication ensures that team members understand their "
+    "responsibilities and shared objectives. Additionally, open dialogue encourages "
+    "collaboration and allows diverse perspectives to contribute to better decision-making. "
+    "Moreover, active listening fosters mutual respect and helps prevent misunderstandings "
+    "before they escalate into conflict."
+)
+APPEAL_REASONING = "I wrote this myself for a class assignment and I have my drafts."
+
+REVIEW_SCENARIOS = [
+    {
+        "name": "a review resolves an appeal",
+        "criterion": 6,
+        # Each review goes to its own fresh item that has been appealed once.
+        # Pass: 200, one new review line, status == outcome, and final_guess is
+        # the original guess for "upheld" or "human" for "overturned".
+        "texts": [
+            REVIEW_TEXT,
+            # Two of your own human-written pieces, so "upheld" is checked on a
+            # guess other than "ai" too.
+            "Sometimes being overseas is fun. But more often than not I miss home. How could I "
+            "not? My whole childhood was there. Who I am today is because of it. Family, friends, "
+            "memories, the culture, the food, the list is endless.",
+            "I didn't sleep. Not properly, anyway — I lay there listening to the boiler tick and "
+            "thinking about the thing I'd said to Marcus at the pub, which was stupid, and which "
+            "he will absolutely bring up again.",
+        ],
+        "reviews": [
+            {"text": 1, "outcome": "overturned", "note": "Drafts show the writer's own revisions."},
+            {"text": 1, "outcome": "upheld", "note": "No evidence offered beyond the claim."},
+            {"text": 2, "outcome": "upheld", "note": "Original decision stands."},
+            {"text": 3, "outcome": "overturned", "note": "Personal detail matches earlier work."},
+            {"text": 1, "outcome": "overturned", "note": "Writer showed version history."},
+        ],
+    },
+    {
+        "name": "only a reviewer can review",
+        "criterion": 7,
+        # Each case is a valid review body for an under_review item, sent with
+        # bad authorization. Pass: every one is 401, the item stays
+        # under_review, no review line is written, one `unauthorized` line is,
+        # and the token never appears in the log.
+        "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer",
+                 "outcome": "overturned", "note": "Trying to clear my own label."},
+        "auth": [
+            {"case": "no header",                "headers": {}},
+            {"case": "empty token",              "headers": {"X-Reviewer-Token": ""}},
+            {"case": "made-up token",            "headers": {"X-Reviewer-Token": "letmein"}},
+            {"case": "real token + 1 character", "headers": {"X-Reviewer-Token": "{token}x"}},
+            {"case": "real token, wrong header", "headers": {"Authorization": "Bearer {token}"}},
+        ],
+        "expect": 401,
+    },
+    {
+        "name": "a reviewed decision is final, and bad review requests change nothing",
+        "criterion": 8,
+        # "on" is the state the item is put in before the request:
+        #   under_review  submitted + appealed
+        #   reviewed      submitted + appealed + reviewed as "overturned"
+        # Pass: the expected code, no new appeal/review line, the item's
+        # status the same before and after, and one `rejected` line.
+        "cases": [
+            {"case": "body is a JSON array", "on": "under_review", "route": "/review",
+             "body": ["{content_id}", "overturned"], "expect": 400},
+            {"case": "outcome missing", "on": "under_review", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer",
+                      "note": "No outcome."}, "expect": 400},
+            {"case": "outcome not allowed", "on": "under_review", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer",
+                      "outcome": "maybe", "note": "Can't decide."}, "expect": 400},
+            {"case": "whitespace note", "on": "under_review", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer",
+                      "outcome": "upheld", "note": "   "}, "expect": 400},
+            {"case": "reviewer_id not a string", "on": "under_review", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": {"name": "x"},
+                      "outcome": "upheld", "note": "Bad reviewer."}, "expect": 400},
+            {"case": "unknown content_id", "on": "under_review", "route": "/review",
+             "body": {"content_id": "c_doesnotexist", "reviewer_id": "eval_reviewer",
+                      "outcome": "upheld", "note": "No such item."}, "expect": 404},
+            {"case": "never appealed", "on": "decided", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer",
+                      "outcome": "overturned", "note": "Nobody appealed."}, "expect": 409},
+            {"case": "second review of a reviewed item", "on": "reviewed", "route": "/review",
+             "body": {"content_id": "{content_id}", "reviewer_id": "eval_reviewer_2",
+                      "outcome": "upheld", "note": "I disagree with the first reviewer."},
+             "expect": 409},
+            {"case": "appeal an under_review item again", "on": "under_review", "route": "/appeal",
+             "body": {"content_id": "{content_id}", "reasoning": "Appealing twice."},
+             "expect": 409},
+            {"case": "appeal an already reviewed item", "on": "reviewed", "route": "/appeal",
+             "body": {"content_id": "{content_id}", "reasoning": "Appealing after review."},
+             "expect": 409},
+        ],
+    },
+    {
+        "name": "two reviews at the same moment",
+        "criterion": 9,
+        # Per run: a fresh under_review item, then two threads released by the
+        # same barrier, one sending "upheld" and one "overturned".
+        # Pass: exactly one 200 and one 409, and exactly one review line.
+        "runs": 5,
+        "outcomes": ["upheld", "overturned"],
+    },
+    {
+        "name": "crashes are still traceable",
+        "criterion": 10,
+        # Each case swaps one function for one that raises, sends a request
+        # that reaches it, then puts the real function back.
+        # "on" works as in criterion 8 (submit cases need no item).
+        # Pass: a 500 with an error_id, exactly one `error` line with that same
+        # error_id and the right error_type, and the item's status unchanged.
+        "crashes": [
+            {"case": "model signal crashes", "route": "/submit",
+             "patch": "detector.model_signal", "raises": "RuntimeError"},
+            {"case": "style signal crashes", "route": "/submit",
+             "patch": "stylometry.style_signal", "raises": "ZeroDivisionError"},
+            {"case": "score combining crashes", "route": "/submit",
+             "patch": "scoring.combine_signals", "raises": "KeyError"},
+            {"case": "appeal write crashes", "route": "/appeal", "on": "decided",
+             "patch": "audit.log_appeal", "raises": "OSError"},
+            {"case": "review write crashes", "route": "/review", "on": "under_review",
+             "patch": "audit.log_review", "raises": "RuntimeError"},
+        ],
+        "expect": 500,
+    },
 ]
 
 
